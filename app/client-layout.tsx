@@ -25,6 +25,11 @@ export default function ClientLayout({
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
+  // Fechar o menu quando a rota mudar
+  useEffect(() => {
+    setIsMenuOpen(false);
+  }, [pathname]);
+
   useEffect(() => {
     const fetchMenuItems = async () => {
       try {
@@ -197,10 +202,16 @@ export default function ClientLayout({
         </div>
 
         {/* Menu mobile expandido */}
-        <div className={`${isMenuOpen ? 'block' : 'hidden'} sm:hidden`}>
+        <div 
+          className={`${
+            isMenuOpen 
+              ? 'max-h-screen opacity-100' 
+              : 'max-h-0 opacity-0'
+          } sm:hidden overflow-hidden transition-all duration-300 ease-in-out`}
+        >
           <div className="pt-2 pb-3 space-y-1">
             {menuItems.map((item) => (
-              <div key={item._id}>
+              <div key={item._id} className="transform transition-transform duration-200 hover:translate-x-1">
                 <Link
                   href={item.url}
                   className={`block pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
@@ -217,7 +228,7 @@ export default function ClientLayout({
                       <Link
                         key={child._id}
                         href={child.url}
-                        className="block pl-3 pr-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                        className="block pl-3 pr-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 transform transition-transform duration-200 hover:translate-x-1"
                       >
                         {child.label}
                       </Link>
@@ -226,6 +237,53 @@ export default function ClientLayout({
                 )}
               </div>
             ))}
+
+            {/* Opções de autenticação para mobile */}
+            <div className="border-t border-gray-200 pt-4 mt-4">
+              {session ? (
+                <>
+                  {session.user?.role === 'admin' && (
+                    <Link
+                      href="/admin"
+                      className="block pl-3 pr-4 py-2 text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900 transform transition-transform duration-200 hover:translate-x-1"
+                    >
+                      Admin
+                    </Link>
+                  )}
+                  <Link
+                    href="/profile"
+                    className={`block pl-3 pr-4 py-2 text-base font-medium transform transition-transform duration-200 hover:translate-x-1 ${
+                      pathname === '/profile'
+                        ? 'text-blue-700 bg-blue-50 font-semibold'
+                        : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                    }`}
+                  >
+                    Perfil
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="block w-full text-left pl-3 pr-4 py-2 text-base font-medium text-red-600 hover:bg-gray-50 hover:text-red-700 transform transition-transform duration-200 hover:translate-x-1"
+                  >
+                    Sair
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/login"
+                    className="block pl-3 pr-4 py-2 text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900 transform transition-transform duration-200 hover:translate-x-1"
+                  >
+                    Entrar
+                  </Link>
+                  <Link
+                    href="/register"
+                    className="block pl-3 pr-4 py-2 text-base font-medium text-blue-600 hover:bg-gray-50 hover:text-blue-700 transform transition-transform duration-200 hover:translate-x-1"
+                  >
+                    Registrar
+                  </Link>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </nav>

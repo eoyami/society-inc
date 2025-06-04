@@ -17,6 +17,11 @@ export default function FeaturedCarousel({ news }: FeaturedCarouselProps) {
 
   // Função para remover tags HTML e limitar o texto
   const stripHtml = (html: string) => {
+    if (typeof window === 'undefined') {
+      // Se estiver no servidor, usa uma abordagem mais simples
+      return html.replace(/<[^>]*>/g, '');
+    }
+    // Se estiver no cliente, usa a abordagem com DOM
     const tmp = document.createElement('DIV');
     tmp.innerHTML = html;
     return tmp.textContent || tmp.innerText || '';
