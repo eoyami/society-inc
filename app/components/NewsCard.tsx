@@ -11,60 +11,48 @@ interface NewsCardProps {
 }
 
 export default function NewsCard({ news, alt }: NewsCardProps) {
-  // Função para remover tags HTML e limitar o texto
-  const stripHtml = (html: string) => {
-    const tmp = document.createElement('DIV');
-    tmp.innerHTML = html;
-    return tmp.textContent || tmp.innerText || '';
-  };
-
-  // Função para truncar texto com limite de caracteres
-  const truncateText = (text: string, limit: number) => {
-    if (text.length <= limit) return text;
-    return text.slice(0, limit) + '...';
-  };
-
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden">
-      <Link href={`/news/${news.slug}`}>
+    <Link href={`/news/${news.slug}`} className="group">
+      <article className="bg-white rounded-lg shadow-md overflow-hidden transition-transform duration-300 hover:shadow-lg">
         <div className="relative h-48">
           <Image
-            src={news.image || '/placeholder.jpg'}
-            alt={alt || `Imagem da notícia: ${news.title}`}
+            src={news.image}
+            alt={alt || news.title}
             fill
-            className="object-cover"
+            className="object-cover group-hover:scale-105 transition-transform duration-300"
           />
         </div>
-      </Link>
-      <div className="p-4">
-        <div className="mb-2">
-          <Link
-            href={`/users/${news.author.username}`}
-            className="text-sm text-gray-600 hover:underline"
-          >
-            {news.author.name}
-          </Link>
-        </div>
-        <Link href={`/news/${news.slug}`}>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2 hover:text-blue-600 line-clamp-2">
-            {truncateText(news.title, 80)}
+        <div className="p-4">
+          <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
+            <span
+              className="px-2 py-1 rounded-full text-xs font-medium"
+              style={{ backgroundColor: `${news.category.color}20`, color: news.category.color }}
+            >
+              {news.category.name}
+            </span>
+            <span>{formatDate(news.updatedAt)}</span>
+          </div>
+          <h2 className="text-xl font-semibold mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
+            {news.title}
           </h2>
-          <p className="text-gray-600 line-clamp-3">
-            {truncateText(stripHtml(news.content), 150)}
+          <p className="text-gray-600 line-clamp-3 mb-4">
+            {news.content.substring(0, 150)}...
           </p>
-        </Link>
-        <div className="mt-4 flex items-center justify-between text-sm text-gray-500">
-          <span>
-            {formatDate(news.updatedAt)}
-          </span>
-          <Link
-            href={`/categories/${news.category}`}
-            className="text-blue-600 hover:underline"
-          >
-            {news.category}
-          </Link>
+          <div className="flex items-center justify-between text-sm text-gray-500">
+            <div className="flex items-center gap-2">
+              <Image
+                src={news.author.avatar || '/images/default-avatar.png'}
+                alt={news.author.name}
+                width={24}
+                height={24}
+                className="rounded-full"
+              />
+              <span>{news.author.name}</span>
+            </div>
+            <span>{news.views} visualizações</span>
+          </div>
         </div>
-      </div>
-    </div>
+      </article>
+    </Link>
   );
 } 

@@ -3,17 +3,17 @@ import { headers } from 'next/headers';
 
 interface Props {
   params: {
-    id: string;
+    slug: string;
   };
 }
 
-async function getNews(id: string) {
+async function getNews(slug: string) {
   try {
     const headersList = await headers();
     const host = headersList.get('host');
     const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https';
     
-    const response = await fetch(`${protocol}://${host}/api/news/${id}`, {
+    const response = await fetch(`${protocol}://${host}/api/news/${slug}`, {
       cache: 'no-store',
       headers: {
         'Content-Type': 'application/json',
@@ -34,32 +34,25 @@ async function getNews(id: string) {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const news = await getNews(params.id);
+  const news = await getNews(params.slug);
 
   if (!news) {
     return {
-      title: 'Notícia não encontrada | Society Inc',
-      description: 'A notícia que você está procurando não foi encontrada.',
+      title: 'Notícia não encontrada',
+      description: 'A notícia solicitada não foi encontrada.'
     };
   }
 
   return {
-    title: `${news.title} | Society Inc`,
-    description: news.content.substring(0, 160), // Primeiros 160 caracteres do conteúdo
+    title: news.title,
+    description: news.excerpt,
     openGraph: {
       title: news.title,
-      description: news.content.substring(0, 160),
-      images: [news.image],
+      description: news.excerpt,
+      images: news.image ? [news.image] : [],
       type: 'article',
-      publishedTime: news.createdAt,
-      authors: [news.author.name],
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title: news.title,
-      description: news.content.substring(0, 160),
-      images: [news.image],
-    },
+      authors: [news.author.name]
+    }
   };
 }
 

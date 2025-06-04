@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/app/lib/auth';
 import { connectDB } from '@/app/lib/mongodb';
 import User from '@/app/models/User';
 
@@ -8,11 +8,8 @@ export async function GET() {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user?.email) {
-      return NextResponse.json(
-        { error: 'Não autenticado' },
-        { status: 401 }
-      );
+    if (!session) {
+      return new NextResponse('Não autorizado', { status: 401 });
     }
 
     await connectDB();

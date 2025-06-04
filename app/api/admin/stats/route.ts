@@ -1,47 +1,41 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/lib/auth';
 import { connectDB } from '@/app/lib/mongodb';
 import User from '@/app/models/User';
 import News from '@/app/models/News';
-import Topic from '@/app/models/Topic';
-import Event from '@/app/models/Event';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-
-interface Session {
-  user?: {
-    name?: string | null;
-    email?: string | null;
-    image?: string | null;
-    role?: string;
-    id?: string;
-  };
-}
+import Category from '@/app/models/Category';
 
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user?.role || session.user.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Não autorizado' },
-        { status: 401 }
-      );
+    if (!session || session.user.role !== 'admin') {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
     await connectDB();
 
-    const [totalUsers, totalNews, totalTopics, totalEvents] = await Promise.all([
+    const [
+      totalUsers,
+      totalNews,
+      totalCategories,
+      recentUsers,
+      recentNews
+    ] = await Promise.all([
       User.countDocuments(),
       News.countDocuments(),
-      Topic.countDocuments(),
-      Event.countDocuments(),
+      Category.countDocuments(),
+      User.find().sort({ createdAt: -1 }).limit(5).select('name email role createdAt'),
+      News.find().sort({ createdAt: -1 }).limit(5).select('title author createdAt')
     ]);
 
     return NextResponse.json({
       totalUsers,
       totalNews,
-      totalTopics,
-      totalEvents,
+      totalCategories,
+      recentUsers,
+      recentNews
     });
   } catch (error) {
     console.error('Erro ao buscar estatísticas:', error);

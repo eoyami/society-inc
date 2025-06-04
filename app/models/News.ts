@@ -1,6 +1,21 @@
-import mongoose from 'mongoose';
+import mongoose, { Document } from 'mongoose';
 
-const newsSchema = new mongoose.Schema({
+export interface INewsDocument extends Document {
+  title: string;
+  slug: string;
+  content: string;
+  image: string;
+  category: mongoose.Schema.Types.ObjectId;
+  author: mongoose.Schema.Types.ObjectId;
+  views: number;
+  excerpt: string;
+  featured: boolean;
+  tags: string[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const newsSchema = new mongoose.Schema<INewsDocument>({
   title: {
     type: String,
     required: true,
@@ -20,7 +35,8 @@ const newsSchema = new mongoose.Schema({
     required: true
   },
   category: {
-    type: String,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Category',
     required: true
   },
   author: {
@@ -54,6 +70,7 @@ newsSchema.index({ category: 1 });
 newsSchema.index({ author: 1 });
 newsSchema.index({ createdAt: -1 });
 
-const News = mongoose.models.News || mongoose.model('News', newsSchema);
+// Verifica se o modelo já existe antes de criar um novo
+const News = mongoose.models.News || mongoose.model<INewsDocument>('News', newsSchema);
 
 export default News; 

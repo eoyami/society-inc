@@ -26,18 +26,19 @@ export default function UsersPage() {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch(`/api/users?page=${page}`);
-      const data = await response.json();
-
+      const response = await fetch('/api/users');
       if (!response.ok) {
-        throw new Error(data.error || 'Erro ao buscar usuários');
+        throw new Error('Falha ao carregar usuários');
       }
-
-      setUsers(data.users);
-      setTotalPages(data.pagination.pages);
+      const data = await response.json();
+      setUsers(data);
       setLoading(false);
     } catch (error) {
-      setError(error.message);
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('Ocorreu um erro ao carregar os usuários');
+      }
       setLoading(false);
     }
   };
@@ -62,7 +63,11 @@ export default function UsersPage() {
         user._id === userId ? { ...user, role: newRole } : user
       ));
     } catch (error) {
-      setError(error.message);
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('Ocorreu um erro ao atualizar o usuário');
+      }
     }
   };
 

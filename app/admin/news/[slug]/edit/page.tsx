@@ -1,50 +1,46 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import NextImage from 'next/image';
 import TiptapEditor from '@/app/components/TiptapEditor';
 
-interface Category {
-  _id: string;
-  name: string;
-  slug: string;
-  color: string;
-}
-
-export default function NewNewsPage() {
+export default function EditNewsPage({ params }: { params: Promise<{ slug: string }> }) {
+  const resolvedParams = use(params);
   const router = useRouter();
   const [title, setTitle] = useState('');
   const [image, setImage] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [content, setContent] = useState('');
-  const [categoryId, setCategoryId] = useState('');
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [category, setCategory] = useState('Geral');
   const [tags, setTags] = useState('');
   const [excerpt, setExcerpt] = useState('');
 
   useEffect(() => {
-    const fetchCategories = async () => {
+    const fetchNews = async () => {
       try {
-        const response = await fetch('/api/categories');
-        if (!response.ok) throw new Error('Erro ao carregar categorias');
+        const response = await fetch(`/api/news/${resolvedParams.slug}`);
+        if (!response.ok) throw new Error('Erro ao carregar notícia');
         const data = await response.json();
-        setCategories(data);
-        if (data.length > 0) {
-          setCategoryId(data[0]._id);
-        }
+        
+        setTitle(data.title);
+        setImage(data.image);
+        setContent(data.content);
+        setCategory(data.category);
+        setTags(data.tags?.join(', ') || '');
+        setExcerpt(data.excerpt);
       } catch (err) {
-        setError('Erro ao carregar categorias');
+        setError('Erro ao carregar notícia');
       }
     };
 
-    fetchCategories();
-  }, []);
+    fetchNews();
+  }, [resolvedParams.slug]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || !image || !content || !excerpt || !categoryId) {
+    if (!title || !image || !content || !excerpt) {
       setError('Por favor, preencha todos os campos obrigatórios');
       return;
     }
@@ -53,8 +49,8 @@ export default function NewNewsPage() {
       setLoading(true);
       setError('');
 
-      const response = await fetch('/api/news', {
-        method: 'POST',
+      const response = await fetch(`/api/news/${resolvedParams.slug}`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -62,7 +58,7 @@ export default function NewNewsPage() {
           title,
           content,
           image,
-          categoryId,
+          category,
           excerpt,
           tags: tags.split(',').map(tag => tag.trim()).filter(Boolean)
         }),
@@ -70,12 +66,12 @@ export default function NewNewsPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Erro ao criar notícia');
+        throw new Error(errorData.error || 'Erro ao atualizar notícia');
       }
 
       router.push('/admin/news');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao criar notícia');
+      setError(err instanceof Error ? err.message : 'Erro ao atualizar notícia');
     } finally {
       setLoading(false);
     }
@@ -85,7 +81,7 @@ export default function NewNewsPage() {
     <div className="min-h-screen bg-gray-900 text-gray-100 p-4">
       <div className="max-w-4xl mx-auto py-8 px-6 bg-gray-800 rounded-lg shadow-xl">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-white">Nova Notícia</h1>
+          <h1 className="text-3xl font-bold text-white">Editar Notícia</h1>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6 p-6 bg-gray-100 rounded-lg shadow-inner text-gray-900">
@@ -150,16 +146,14 @@ export default function NewNewsPage() {
             </label>
             <select
               id="category"
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
               className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-              required
             >
-              {categories.map((category) => (
-                <option key={category._id} value={category._id}>
-                  {category.name}
-                </option>
-              ))}
+              <option value="Geral">Geral</option>
+              <option value="Jogos">Jogos</option>
+              <option value="Tecnologia">Tecnologia</option>
+              <option value="Esports">Esports</option>
             </select>
           </div>
 
@@ -179,7 +173,7 @@ export default function NewNewsPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Conteúdo</label>
-            <TiptapEditor onChange={setContent} />
+            <TiptapEditor onChange={setContent} content={content} />
           </div>
 
           {error && (
@@ -201,7 +195,7 @@ export default function NewNewsPage() {
               disabled={loading}
               className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Criando...' : 'Criar Notícia'}
+              {loading ? 'Salvando...' : 'Salvar Alterações'}
             </button>
           </div>
         </form>

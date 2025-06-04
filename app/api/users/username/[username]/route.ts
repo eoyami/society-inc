@@ -1,39 +1,49 @@
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/lib/auth';
 import { connectDB } from '@/app/lib/mongodb';
+import mongoose from 'mongoose';
 import User from '@/app/models/User';
 import News from '@/app/models/News';
-import { authOptions } from '../../../auth/[...nextauth]/route';
+
+interface UserDocument {
+  _id: string;
+  name: string;
+  email: string;
+  username: string;
+  image: string;
+  role: string;
+  points: number;
+  level: number;
+}
 
 export async function GET(
-  request: Request,
-  context: { params: { username: string } }
+  request: NextRequest,
+  { params }: any
 ) {
   try {
     const session = await getServerSession(authOptions);
 
     if (!session) {
-      return NextResponse.json(
-        { error: 'Não autorizado' },
-        { status: 401 }
-      );
+      return new Response(JSON.stringify({ error: 'Não autorizado' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
     console.log('Iniciando busca de usuário por username...');
-    console.log('Username:', context.params.username);
+    console.log('Username:', params.username);
 
     await connectDB();
 
-    const user = await User.findOne({ username: context.params.username })
-      .select('-password')
-      .lean();
+    const user = await User.findOne({ username: params.username }) as UserDocument | null;
 
     if (!user) {
       console.log('Usuário não encontrado');
-      return NextResponse.json(
-        { error: 'Usuário não encontrado' },
-        { status: 404 }
-      );
+      return new Response(JSON.stringify({ error: 'Usuário não encontrado' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
     console.log('Usuário encontrado:', user._id);
@@ -46,15 +56,18 @@ export async function GET(
 
     console.log('Notícias encontradas:', news.length);
 
-    return NextResponse.json({
+    return new Response(JSON.stringify({
       ...user,
       news
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
     });
   } catch (error) {
     console.error('Erro ao buscar usuário:', error);
-    return NextResponse.json(
-      { error: 'Erro ao buscar usuário' },
-      { status: 500 }
-    );
+    return new Response(JSON.stringify({ error: 'Erro ao buscar usuário' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 } 

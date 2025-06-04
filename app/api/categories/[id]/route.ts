@@ -1,113 +1,94 @@
-import { NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { connectDB } from '@/app/lib/mongodb';
-import Category from '@/app/models/Category';
+import { ObjectId } from 'mongodb';
+import mongoose from 'mongoose';
 
 export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  { params }: any
 ) {
   try {
     await connectDB();
-    const category = await Category.findById(params.id);
+    const category = await mongoose.model('Category').findOne({
+      _id: new ObjectId(params.id)
+    });
 
     if (!category) {
-      return NextResponse.json(
-        { error: 'Categoria não encontrada' },
-        { status: 404 }
-      );
+      return new Response(JSON.stringify({ error: 'Categoria não encontrada' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
-    return NextResponse.json(category);
+    return new Response(JSON.stringify(category), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
   } catch (error) {
-    console.error('Erro ao buscar categoria:', error);
-    return NextResponse.json(
-      { error: 'Erro ao buscar categoria' },
-      { status: 500 }
-    );
+    return new Response(JSON.stringify({ error: 'Erro ao buscar categoria' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 }
 
 export async function PUT(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  { params }: any
 ) {
   try {
-    const { name, description, image, color } = await request.json();
-
-    if (!name) {
-      return NextResponse.json(
-        { error: 'Nome é obrigatório' },
-        { status: 400 }
-      );
-    }
-
-    if (!image) {
-      return NextResponse.json(
-        { error: 'Imagem é obrigatória' },
-        { status: 400 }
-      );
-    }
-
     await connectDB();
-    
-    // Criar slug a partir do nome
-    const slug = name
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '');
+    const body = await request.json();
 
-    const category = await Category.findByIdAndUpdate(
-      params.id,
-      {
-        name,
-        slug,
-        description,
-        image,
-        color: color || '#3B82F6'
-      },
-      { new: true }
+    const result = await mongoose.model('Category').updateOne(
+      { _id: new ObjectId(params.id) },
+      { $set: body }
     );
 
-    if (!category) {
-      return NextResponse.json(
-        { error: 'Categoria não encontrada' },
-        { status: 404 }
-      );
+    if (result.matchedCount === 0) {
+      return new Response(JSON.stringify({ error: 'Categoria não encontrada' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
-    return NextResponse.json(category);
+    return new Response(JSON.stringify({ message: 'Categoria atualizada com sucesso' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
   } catch (error) {
-    console.error('Erro ao atualizar categoria:', error);
-    return NextResponse.json(
-      { error: 'Erro ao atualizar categoria' },
-      { status: 500 }
-    );
+    return new Response(JSON.stringify({ error: 'Erro ao atualizar categoria' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 }
 
 export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  { params }: any
 ) {
   try {
     await connectDB();
-    const category = await Category.findByIdAndDelete(params.id);
+    const result = await mongoose.model('Category').deleteOne({
+      _id: new ObjectId(params.id)
+    });
 
-    if (!category) {
-      return NextResponse.json(
-        { error: 'Categoria não encontrada' },
-        { status: 404 }
-      );
+    if (result.deletedCount === 0) {
+      return new Response(JSON.stringify({ error: 'Categoria não encontrada' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
-    return NextResponse.json({ message: 'Categoria excluída com sucesso' });
+    return new Response(JSON.stringify({ message: 'Categoria excluída com sucesso' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
   } catch (error) {
-    console.error('Erro ao excluir categoria:', error);
-    return NextResponse.json(
-      { error: 'Erro ao excluir categoria' },
-      { status: 500 }
-    );
+    return new Response(JSON.stringify({ error: 'Erro ao excluir categoria' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 } 

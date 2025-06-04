@@ -4,48 +4,31 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  image?: string;
+  role?: string;
+  username: string;
+  level: number;
+  points: number;
+}
+
 export default function ProfilePage() {
-  const { data: session, status } = useSession();
+  const { data: session } = useSession();
   const router = useRouter();
 
   useEffect(() => {
-    const redirectToUserProfile = async () => {
-      console.log('Status da sessão:', status);
-      console.log('Dados da sessão:', session);
+    const user = session?.user as User | undefined;
 
-      if (status === 'unauthenticated') {
-        console.log('Usuário não autenticado, redirecionando para login...');
-        router.push('/login');
-        return;
-      }
+    if (!user?.username) {
+      router.replace('/login');
+      return;
+    }
 
-      if (status === 'authenticated' && session?.user?.id) {
-        try {
-          console.log('Buscando dados do usuário...', session.user.id);
-          const response = await fetch(`/api/users/${session.user.id}`);
-          
-          if (!response.ok) {
-            throw new Error('Erro ao carregar perfil');
-          }
-          
-          const data = await response.json();
-          console.log('Dados do usuário recebidos:', data);
-          
-          if (data?.username) {
-            console.log('Redirecionando para perfil do usuário:', data.username);
-            router.push(`/profile/${data.username}`);
-          } else {
-            throw new Error('Username não encontrado');
-          }
-        } catch (error) {
-          console.error('Erro ao redirecionar:', error);
-          router.push('/login');
-        }
-      }
-    };
-
-    redirectToUserProfile();
-  }, [session, status, router]);
+    router.replace(`/profile/${user.username}`);
+  }, [session?.user, router]);
 
   return (
     <div className="flex justify-center items-center min-h-screen">

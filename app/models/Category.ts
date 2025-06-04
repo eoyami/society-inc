@@ -1,6 +1,16 @@
-import mongoose from 'mongoose';
+import mongoose, { Document } from 'mongoose';
 
-const categorySchema = new mongoose.Schema({
+export interface ICategoryDocument extends Document {
+  name: string;
+  slug: string;
+  description?: string;
+  image: string;
+  color: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const categorySchema = new mongoose.Schema<ICategoryDocument>({
   name: {
     type: String,
     required: true,
@@ -24,12 +34,22 @@ const categorySchema = new mongoose.Schema({
     default: '#3B82F6' // Cor padrão azul
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
 });
 
 // Criar índice para busca por slug
 categorySchema.index({ slug: 1 });
 
-const Category = mongoose.models.Category || mongoose.model('Category', categorySchema);
+// Relação virtual com as notícias
+categorySchema.virtual('news', {
+  ref: 'News',
+  localField: '_id',
+  foreignField: 'category'
+});
+
+// Verifica se o modelo já existe antes de criar um novo
+const Category = mongoose.models.Category || mongoose.model<ICategoryDocument>('Category', categorySchema);
 
 export default Category; 

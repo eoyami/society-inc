@@ -73,4 +73,7 @@ const userSchema = new mongoose.Schema<IUserDocument>({
   timestamps: true,
 });
 
-export default mongoose.models.User || mongoose.model<IUserDocument>('User', userSchema); 
+// Verifica se o modelo já existe antes de criar um novo
+const User = mongoose.models.User || mongoose.model<IUserDocument>('User', userSchema);
+
+export default User; 

@@ -1,87 +1,90 @@
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
+import { NextRequest } from 'next/server';
 import { connectDB } from '@/app/lib/mongodb';
-import Topic from '@/app/models/Topic';
+import { ObjectId } from 'mongodb';
+import mongoose from 'mongoose';
 
 export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  { params }: any
 ) {
   try {
     await connectDB();
-    const topic = await Topic.findById(params.id)
-      .populate('author', 'name image')
-      .populate('replies.author', 'name image');
-    
+    const topic = await mongoose.model('Topic').findOne({ _id: new ObjectId(params.id) });
+
     if (!topic) {
-      return NextResponse.json({ error: 'Tópico não encontrado' }, { status: 404 });
+      return new Response(JSON.stringify({ error: 'Tópico não encontrado' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
-    return NextResponse.json(topic);
+    return new Response(JSON.stringify(topic), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
   } catch (error) {
-    return NextResponse.json({ error: 'Erro ao buscar tópico' }, { status: 500 });
+    return new Response(JSON.stringify({ error: 'Erro ao buscar tópico' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 }
 
 export async function PUT(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  { params }: any
 ) {
   try {
-    const session = await getServerSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
-
-    await connectDB();
     const data = await request.json();
-    const topic = await Topic.findById(params.id);
+    await connectDB();
 
-    if (!topic) {
-      return NextResponse.json({ error: 'Tópico não encontrado' }, { status: 404 });
-    }
-
-    if (topic.author.toString() !== session.user.id && session.user.role !== 'admin') {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
-
-    const updatedTopic = await Topic.findByIdAndUpdate(
-      params.id,
-      { ...data },
-      { new: true }
+    const result = await mongoose.model('Topic').updateOne(
+      { _id: new ObjectId(params.id) },
+      { $set: data }
     );
 
-    return NextResponse.json(updatedTopic);
+    if (result.matchedCount === 0) {
+      return new Response(JSON.stringify({ error: 'Tópico não encontrado' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    return new Response(JSON.stringify({ message: 'Tópico atualizado com sucesso' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
   } catch (error) {
-    return NextResponse.json({ error: 'Erro ao atualizar tópico' }, { status: 500 });
+    return new Response(JSON.stringify({ error: 'Erro ao atualizar tópico' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 }
 
 export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  { params }: any
 ) {
   try {
-    const session = await getServerSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
-
     await connectDB();
-    const topic = await Topic.findById(params.id);
+    const result = await mongoose.model('Topic').deleteOne({ _id: new ObjectId(params.id) });
 
-    if (!topic) {
-      return NextResponse.json({ error: 'Tópico não encontrado' }, { status: 404 });
+    if (result.deletedCount === 0) {
+      return new Response(JSON.stringify({ error: 'Tópico não encontrado' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
-    if (topic.author.toString() !== session.user.id && session.user.role !== 'admin') {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
-
-    await Topic.findByIdAndDelete(params.id);
-
-    return NextResponse.json({ message: 'Tópico removido com sucesso' });
+    return new Response(JSON.stringify({ message: 'Tópico excluído com sucesso' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
   } catch (error) {
-    return NextResponse.json({ error: 'Erro ao remover tópico' }, { status: 500 });
+    return new Response(JSON.stringify({ error: 'Erro ao excluir tópico' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 } 

@@ -5,7 +5,28 @@ import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
-import { News } from '@/app/lib/news';
+
+interface Author {
+  _id: string;
+  name: string;
+  username: string;
+  image?: string;
+}
+
+interface News {
+  _id: string;
+  title: string;
+  slug: string;
+  content: string;
+  image: string;
+  author: Author;
+  views: number;
+  excerpt: string;
+  featured: boolean;
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+}
 
 export default function NewsPage() {
   const params = useParams();
@@ -18,45 +39,35 @@ export default function NewsPage() {
   useEffect(() => {
     const fetchNews = async () => {
       try {
-        if (!params.id) {
+        if (!params.slug) {
           throw new Error('Slug da notícia não fornecido');
         }
 
-        const response = await fetch(`/api/news/${params.id}`);
+        const response = await fetch(`/api/news/${params.slug}`);
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Erro ao carregar notícia');
+          throw new Error('Erro ao carregar notícia');
         }
 
         const data = await response.json();
         setNews(data);
 
-        // Verificar se já visualizou esta notícia nas últimas 24 horas
-        const viewedNews = localStorage.getItem('viewedNews');
-        const viewedNewsData = viewedNews ? JSON.parse(viewedNews) : {};
-        
-        const lastView = viewedNewsData[params.id as string];
+        // Registrar visualização
+        const viewedNewsData = JSON.parse(localStorage.getItem('viewedNews') || '{}');
         const now = new Date().getTime();
-        const oneDay = 24 * 60 * 60 * 1000; // 24 horas em milissegundos
+        const lastView = viewedNewsData[params.slug as string];
 
-        if (!lastView || (now - lastView) > oneDay) {
-          // Registrar visualização
-          const viewResponse = await fetch(`/api/news/${params.id}/views`, { 
-            method: 'POST' 
+        // Só registra visualização se passou mais de 1 hora desde a última
+        if (!lastView || now - lastView > 3600000) {
+          const viewResponse = await fetch(`/api/news/${params.slug}/views`, {
+            method: 'POST'
           });
-          
+
           if (viewResponse.ok) {
-            // Atualizar o cache com a nova visualização
-            viewedNewsData[params.id as string] = now;
+            viewedNewsData[params.slug as string] = now;
             localStorage.setItem('viewedNews', JSON.stringify(viewedNewsData));
-            
-            // Atualizar o contador na UI
-            const viewData = await viewResponse.json();
-            setNews(prev => prev ? { ...prev, views: viewData.views } : null);
           }
         }
       } catch (err) {
-        console.error('Erro ao carregar notícia:', err);
         setError(err instanceof Error ? err.message : 'Erro ao carregar notícia');
       } finally {
         setLoading(false);
@@ -64,43 +75,7 @@ export default function NewsPage() {
     };
 
     fetchNews();
-  }, [params.id]);
-
-  useEffect(() => {
-    const registerView = async () => {
-      if (!news) return;
-
-      // Verificar se já visualizou esta notícia nas últimas 24 horas
-      const viewedNews = localStorage.getItem('viewedNews');
-      const viewedNewsData = viewedNews ? JSON.parse(viewedNews) : {};
-      
-      const lastView = viewedNewsData[news._id];
-      const now = new Date().getTime();
-      const oneDay = 24 * 60 * 60 * 1000; // 24 horas em milissegundos
-
-      if (!lastView || (now - lastView) > oneDay) {
-        try {
-          const response = await fetch(`/api/news/${news._id}/views`, {
-            method: 'POST',
-          });
-          
-          if (response.ok) {
-            // Atualizar o cache com a nova visualização
-            viewedNewsData[news._id] = now;
-            localStorage.setItem('viewedNews', JSON.stringify(viewedNewsData));
-            
-            // Atualizar o contador na UI
-            const data = await response.json();
-            setNews(prev => prev ? { ...prev, views: data.views } : null);
-          }
-        } catch (error) {
-          console.error('Erro ao registrar visualização:', error);
-        }
-      }
-    };
-
-    registerView();
-  }, [news]);
+  }, [params.slug]);
 
   if (loading) {
     return (
@@ -147,30 +122,29 @@ export default function NewsPage() {
           
           <div className="flex flex-wrap items-center gap-4 mb-8 pb-6 border-b border-gray-200">
             <div className="flex items-center gap-4">
-              <Link href={`/profile/${news.author.username}`} className="relative h-12 w-12 rounded-full overflow-hidden">
-                {news.author?.image && news.author.image.trim() !== '' && (
+              <Link href={`/profile/${news.author.username}`} className="relative h-12 w-12 rounded-full overflow-hidden hover:opacity-80 transition-opacity">
+                {news.author?.image && news.author.image.trim() !== '' ? (
                   <Image
                     src={news.author.image}
                     alt={news.author.name}
                     fill
                     className="object-cover"
                   />
+                ) : (
+                  <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-500">
+                    {news.author.name.charAt(0)}
+                  </div>
                 )}
               </Link>
               <div>
-                <Link 
-                  href={`/profile/${news.author.username}`}
-                  className="font-semibold text-gray-900 hover:text-blue-600 transition-colors"
-                >
+                <Link href={`/profile/${news.author.username}`} className="text-gray-900 hover:text-blue-600 font-medium">
                   {news.author.name}
                 </Link>
-                <p className="text-gray-600 text-sm">
+                <p className="text-sm text-gray-500">
                   {new Date(news.createdAt).toLocaleDateString('pt-BR', {
                     day: '2-digit',
                     month: 'long',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
+                    year: 'numeric'
                   })}
                 </p>
               </div>

@@ -1,49 +1,55 @@
 import mongoose from 'mongoose';
+import '../models/User';
+import '../models/News';
+import '../models/Category';
 
-const MONGODB_URI = process.env.MONGODB_URI;
+interface MongooseCache {
+  conn: typeof mongoose | null;
+  promise: Promise<typeof mongoose> | null;
+}
+
+declare global {
+  var mongoose: MongooseCache;
+}
+
+const MONGODB_URI = process.env.MONGODB_URI as string;
 
 if (!MONGODB_URI) {
   throw new Error('Por favor, defina a variável de ambiente MONGODB_URI');
 }
 
-let cached = global.mongoose;
+let cached: MongooseCache = global.mongoose;
 
 if (!cached) {
   cached = global.mongoose = { conn: null, promise: null };
 }
 
-export async function connectDB() {
+export async function connectDB(): Promise<typeof mongoose> {
+  console.log('Verificando conexão com o MongoDB...');
+  
   if (cached.conn) {
+    console.log('Usando conexão existente');
     return cached.conn;
   }
 
   if (!cached.promise) {
+    console.log('Criando nova conexão com o MongoDB');
     const opts = {
-      bufferCommands: true,
-      maxPoolSize: 10,
-      minPoolSize: 5,
-      maxIdleTimeMS: 60000,
-      socketTimeoutMS: 45000,
-      connectTimeoutMS: 10000,
+      bufferCommands: false,
     };
 
-    cached.promise = mongoose.connect(MONGODB_URI!, opts)
-      .then((mongoose) => {
-        console.log('Conexão com MongoDB estabelecida com sucesso');
-        return mongoose;
-      })
-      .catch((error) => {
-        console.error('Erro ao conectar com MongoDB:', error);
-        throw error;
-      });
+    cached.promise = mongoose.connect(MONGODB_URI, opts);
   }
 
   try {
-    cached.conn = await cached.promise;
+    console.log('Aguardando conexão...');
+    const mongoose = await cached.promise;
+    console.log('Conexão estabelecida com sucesso');
+    cached.conn = mongoose;
+    return mongoose;
   } catch (e) {
+    console.error('Erro ao conectar com o MongoDB:', e);
     cached.promise = null;
     throw e;
   }
-
-  return cached.conn;
 } 

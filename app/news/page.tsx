@@ -13,6 +13,7 @@ interface News {
   featured: boolean;
   tags: string[];
   createdAt: string;
+  slug: string;
 }
 
 export default function NewsPage() {
@@ -72,7 +73,7 @@ export default function NewsPage() {
       {featuredNews && (
         <div className="mb-12">
           <h2 className="text-2xl font-bold mb-6">Destaque</h2>
-          <Link href={`/news/${featuredNews._id}`} className="block">
+          <Link href={`/news/${featuredNews.slug}`} className="block">
             <div className="bg-white rounded-lg shadow-lg overflow-hidden">
               <div className="relative h-96">
                 <Image
@@ -104,7 +105,7 @@ export default function NewsPage() {
       {/* Lista de Notícias */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {news.map((item) => (
-          <Link key={item._id} href={`/news/${item._id}`} className="block">
+          <Link key={item._id} href={`/news/${item.slug}`} className="block">
             <div className="bg-white rounded-lg shadow-lg overflow-hidden h-full">
               <div className="relative h-48">
                 <Image

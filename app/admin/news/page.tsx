@@ -17,6 +17,7 @@ interface News {
   createdAt: string;
   likes: number;
   comments: number;
+  slug: string;
 }
 
 export default function NewsPage() {
@@ -51,13 +52,13 @@ export default function NewsPage() {
     fetchNews();
   }, [page]);
 
-  const deleteNews = async (id: string) => {
+  const deleteNews = async (slug: string) => {
     if (!confirm('Tem certeza que deseja excluir esta notícia?')) {
       return;
     }
 
     try {
-      const response = await fetch(`/api/news/${id}`, {
+      const response = await fetch(`/api/news/${slug}`, {
         method: 'DELETE',
       });
 
@@ -65,7 +66,7 @@ export default function NewsPage() {
         throw new Error('Erro ao excluir notícia');
       }
 
-      setNews(news.filter((item) => item._id !== id));
+      setNews(news.filter((item) => item.slug !== slug));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao excluir notícia');
     }
@@ -133,13 +134,13 @@ export default function NewsPage() {
                   </div>
                   <div className="flex space-x-2">
                     <Link
-                      href={`/admin/news/${item._id}/edit`}
+                      href={`/admin/news/${item.slug}/edit`}
                       className="text-blue-600 hover:text-blue-900"
                     >
                       Editar
                     </Link>
                     <button
-                      onClick={() => deleteNews(item._id)}
+                      onClick={() => deleteNews(item.slug)}
                       className="text-red-600 hover:text-red-900"
                     >
                       Excluir

@@ -3,9 +3,15 @@ import { getServerSession } from 'next-auth/next';
 import { connectDB } from '@/app/lib/mongodb';
 import Achievement from '@/app/models/Achievement';
 
+type RouteContext = {
+  params: Promise<{
+    id: string;
+  }>;
+};
+
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  context: RouteContext
 ) {
   try {
     const session = await getServerSession();
@@ -13,6 +19,7 @@ export async function GET(
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
+    const params = await context.params;
     await connectDB();
     const achievement = await Achievement.findById(params.id).lean();
 
@@ -29,7 +36,7 @@ export async function GET(
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  context: RouteContext
 ) {
   try {
     const session = await getServerSession();
@@ -37,6 +44,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
+    const params = await context.params;
     const data = await request.json();
     await connectDB();
     const achievement = await Achievement.findByIdAndUpdate(
@@ -58,7 +66,7 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  context: RouteContext
 ) {
   try {
     const session = await getServerSession();
@@ -66,6 +74,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
+    const params = await context.params;
     await connectDB();
     const achievement = await Achievement.findByIdAndDelete(params.id).lean();
 

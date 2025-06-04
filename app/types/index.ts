@@ -18,7 +18,11 @@ export interface News {
   slug: string;
   content: string;
   image: string;
-  category: string;
+  category: {
+    _id: string;
+    name: string;
+    color: string;
+  };
   author: {
     _id: string;
     name: string;

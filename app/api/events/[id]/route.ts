@@ -1,73 +1,94 @@
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
+import { NextRequest } from 'next/server';
 import { connectDB } from '@/app/lib/mongodb';
-import Event from '@/app/models/Event';
+import { ObjectId } from 'mongodb';
+import mongoose from 'mongoose';
 
 export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  { params }: any
 ) {
   try {
     await connectDB();
-    const event = await Event.findById(params.id).populate('organizer', 'name image');
-    
+    const event = await mongoose.model('Event').findOne({
+      _id: new ObjectId(params.id)
+    });
+
     if (!event) {
-      return NextResponse.json({ error: 'Evento não encontrado' }, { status: 404 });
+      return new Response(JSON.stringify({ error: 'Evento não encontrado' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
-    return NextResponse.json(event);
+    return new Response(JSON.stringify(event), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
   } catch (error) {
-    return NextResponse.json({ error: 'Erro ao buscar evento' }, { status: 500 });
+    return new Response(JSON.stringify({ error: 'Erro ao buscar evento' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 }
 
 export async function PUT(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  { params }: any
 ) {
   try {
-    const session = await getServerSession();
-    if (!session || session.user.role !== 'admin') {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
-
     await connectDB();
-    const data = await request.json();
-    const event = await Event.findByIdAndUpdate(
-      params.id,
-      { ...data },
-      { new: true }
+    const body = await request.json();
+
+    const result = await mongoose.model('Event').updateOne(
+      { _id: new ObjectId(params.id) },
+      { $set: body }
     );
 
-    if (!event) {
-      return NextResponse.json({ error: 'Evento não encontrado' }, { status: 404 });
+    if (result.matchedCount === 0) {
+      return new Response(JSON.stringify({ error: 'Evento não encontrado' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
-    return NextResponse.json(event);
+    return new Response(JSON.stringify({ message: 'Evento atualizado com sucesso' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
   } catch (error) {
-    return NextResponse.json({ error: 'Erro ao atualizar evento' }, { status: 500 });
+    return new Response(JSON.stringify({ error: 'Erro ao atualizar evento' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 }
 
 export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  { params }: any
 ) {
   try {
-    const session = await getServerSession();
-    if (!session || session.user.role !== 'admin') {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
-
     await connectDB();
-    const event = await Event.findByIdAndDelete(params.id);
+    const result = await mongoose.model('Event').deleteOne({
+      _id: new ObjectId(params.id)
+    });
 
-    if (!event) {
-      return NextResponse.json({ error: 'Evento não encontrado' }, { status: 404 });
+    if (result.deletedCount === 0) {
+      return new Response(JSON.stringify({ error: 'Evento não encontrado' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
-    return NextResponse.json({ message: 'Evento removido com sucesso' });
+    return new Response(JSON.stringify({ message: 'Evento excluído com sucesso' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
   } catch (error) {
-    return NextResponse.json({ error: 'Erro ao remover evento' }, { status: 500 });
+    return new Response(JSON.stringify({ error: 'Erro ao excluir evento' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 } 

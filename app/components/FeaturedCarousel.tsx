@@ -3,14 +3,14 @@
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { News } from '../lib/news';
+import { News } from '@/app/types';
 
 interface FeaturedCarouselProps {
-  featuredNews: News[];
+  news: News[];
 }
 
-export default function FeaturedCarousel({ featuredNews }: FeaturedCarouselProps) {
-  const [currentSlide, setCurrentSlide] = useState(0);
+export default function FeaturedCarousel({ news }: FeaturedCarouselProps) {
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
@@ -35,34 +35,34 @@ export default function FeaturedCarousel({ featuredNews }: FeaturedCarouselProps
     const isRightSwipe = distance < -minSwipeDistance;
 
     if (isLeftSwipe) {
-      setCurrentSlide((prev) => (prev + 1) % featuredNews.length);
+      setCurrentIndex((prev) => (prev + 1) % news.length);
     }
     if (isRightSwipe) {
-      setCurrentSlide((prev) => (prev - 1 + featuredNews.length) % featuredNews.length);
+      setCurrentIndex((prev) => (prev - 1 + news.length) % news.length);
     }
   };
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % featuredNews.length);
+      setCurrentIndex((prevIndex) => (prevIndex + 1) % news.length);
     }, 5000);
 
     return () => clearInterval(timer);
-  }, [featuredNews.length]);
+  }, [news.length]);
 
   const nextSlide = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setCurrentSlide((prev) => (prev + 1) % featuredNews.length);
+    setCurrentIndex((prev) => (prev + 1) % news.length);
   };
 
   const prevSlide = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setCurrentSlide((prev) => (prev - 1 + featuredNews.length) % featuredNews.length);
+    setCurrentIndex((prev) => (prev - 1 + news.length) % news.length);
   };
 
-  if (!featuredNews.length) return null;
+  if (!news.length) return null;
 
   return (
     <div 
@@ -72,11 +72,11 @@ export default function FeaturedCarousel({ featuredNews }: FeaturedCarouselProps
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
     >
-      {featuredNews.map((news, index) => (
+      {news.map((news, index) => (
         <div
           key={news._id}
-          className={`absolute inset-0 transition-opacity duration-1000 ${
-            index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 pointer-events-none'
+          className={`absolute inset-0 transition-opacity duration-500 ${
+            index === currentIndex ? 'opacity-100 z-10' : 'opacity-0 pointer-events-none'
           }`}
         >
           <Link 
@@ -97,15 +97,18 @@ export default function FeaturedCarousel({ featuredNews }: FeaturedCarouselProps
                   <span className="text-gray-400">Sem imagem</span>
                 </div>
               )}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
               <div className="absolute bottom-0 left-0 right-0 p-8 text-white">
                 <h2 className="text-3xl font-bold mb-2 line-clamp-2">{news.title}</h2>
-                <p className="text-lg mb-4 line-clamp-2">{news.excerpt}</p>
+                <p className="text-lg mb-4 line-clamp-2">{news.content.substring(0, 150)}...</p>
                 <div className="flex items-center text-sm">
                   <span className="mr-4">{new Date(news.createdAt).toLocaleDateString('pt-BR')}</span>
                   {news.category && (
-                    <span className="px-2 py-1 bg-white/20 rounded-full text-xs">
-                      {news.category}
+                    <span
+                      className="px-2 py-1 rounded-full text-xs font-medium"
+                      style={{ backgroundColor: `${news.category.color}20`, color: news.category.color }}
+                    >
+                      {news.category.name}
                     </span>
                   )}
                 </div>
@@ -137,16 +140,16 @@ export default function FeaturedCarousel({ featuredNews }: FeaturedCarouselProps
 
       {/* Indicadores */}
       <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2 z-20">
-        {featuredNews.map((_, index) => (
+        {news.map((_, index) => (
           <button
             key={index}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              setCurrentSlide(index);
+              setCurrentIndex(index);
             }}
-            className={`w-3 h-3 rounded-full transition-colors ${
-              index === currentSlide ? 'bg-white' : 'bg-white/50'
+            className={`w-2 h-2 rounded-full transition-colors ${
+              index === currentIndex ? 'bg-white' : 'bg-white/50'
             }`}
             aria-label={`Ir para slide ${index + 1}`}
           />

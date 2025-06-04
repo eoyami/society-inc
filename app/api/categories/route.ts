@@ -9,10 +9,7 @@ export async function GET() {
     return NextResponse.json(categories);
   } catch (error) {
     console.error('Erro ao buscar categorias:', error);
-    return NextResponse.json(
-      { error: 'Erro ao buscar categorias' },
-      { status: 500 }
-    );
+    return new NextResponse('Erro interno do servidor', { status: 500 });
   }
 }
 

@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/lib/auth';
 import { connectDB } from '@/app/lib/mongodb';
 import News from '@/app/models/News';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import Category from '@/app/models/Category';
+import { slugify } from '@/app/lib/utils';
 
 function generateSlug(title: string): string {
   return title
@@ -13,9 +15,58 @@ function generateSlug(title: string): string {
     .replace(/(^-|-$)/g, '');
 }
 
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const categorySlug = searchParams.get('category');
+    const search = searchParams.get('search');
+
+    await connectDB();
+
+    const query: any = {};
+    if (categorySlug) {
+      const category = await Category.findOne({ slug: categorySlug });
+      if (category) {
+        query.category = category._id;
+      }
+    }
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { content: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    const [news, total] = await Promise.all([
+      News.find(query)
+        .populate('author', 'name username image')
+        .populate('category', 'name color')
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      News.countDocuments(query),
+    ]);
+
+    return NextResponse.json({
+      news,
+      total,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+    });
+  } catch (error) {
+    console.error('Erro ao buscar notícias:', error);
+    return new NextResponse('Erro interno do servidor', { status: 500 });
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
+    console.log('Sessão:', session);
+
     if (!session?.user) {
       return NextResponse.json(
         { error: 'Não autorizado' },
@@ -23,94 +74,77 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!session.user.id) {
-      return NextResponse.json(
-        { error: 'ID do usuário não encontrado' },
-        { status: 401 }
-      );
-    }
+    const data = await request.json();
+    console.log('Dados recebidos:', data);
+    
+    const { title, content, image, categoryId, excerpt, featured, tags } = data;
 
-    const { title, content, image, category = 'Geral', tags = [], excerpt } = await request.json();
+    // Validação detalhada dos campos
+    const missingFields = [];
+    if (!title) missingFields.push('título');
+    if (!content) missingFields.push('conteúdo');
+    if (!categoryId) missingFields.push('categoria');
 
-    if (!title || !content || !image || !excerpt) {
+    if (missingFields.length > 0) {
       return NextResponse.json(
-        { error: 'Título, conteúdo, imagem e resumo são obrigatórios' },
+        { 
+          error: 'Campos obrigatórios faltando',
+          missingFields,
+          message: `Por favor, preencha os seguintes campos: ${missingFields.join(', ')}`
+        },
         { status: 400 }
       );
     }
 
     await connectDB();
 
-    // Gera o slug baseado no título
-    const baseSlug = generateSlug(title);
-    let slug = baseSlug;
-    let counter = 1;
-
-    // Verifica se já existe uma notícia com o mesmo slug
-    while (await News.findOne({ slug })) {
-      slug = `${baseSlug}-${counter}`;
-      counter++;
+    // Verificar se a categoria existe
+    const category = await Category.findById(categoryId);
+    if (!category) {
+      return NextResponse.json(
+        { error: 'Categoria não encontrada' },
+        { status: 400 }
+      );
     }
 
-    const news = await News.create({
+    // Criar slug a partir do título
+    const slug = slugify(title);
+    console.log('Slug gerado:', slug);
+
+    // Verificar se já existe uma notícia com o mesmo slug
+    const existingNews = await News.findOne({ slug });
+    if (existingNews) {
+      return NextResponse.json(
+        { error: 'Já existe uma notícia com este título' },
+        { status: 400 }
+      );
+    }
+
+    const newsData = {
       title,
+      slug,
       content,
       image,
-      excerpt,
+      category: categoryId,
       author: session.user.id,
-      views: 0,
-      featured: false,
-      category,
-      tags,
-      slug
-    });
+      excerpt: excerpt || content.substring(0, 200) + '...',
+      featured: featured || false,
+      tags: tags || []
+    };
+
+    console.log('Criando notícia com dados:', newsData);
+
+    const news = await News.create(newsData);
+    console.log('Notícia criada com sucesso:', news._id);
 
     return NextResponse.json(news, { status: 201 });
   } catch (error) {
     console.error('Erro ao criar notícia:', error);
     return NextResponse.json(
-      { error: 'Erro ao criar notícia' },
-      { status: 500 }
-    );
-  }
-}
-
-export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '10');
-    const skip = (page - 1) * limit;
-
-    await connectDB();
-
-    // Busca a notícia em destaque
-    const featuredNews = await News.findOne({ featured: true })
-      .sort({ createdAt: -1 })
-      .populate('author', 'name image');
-
-    // Busca as notícias normais
-    const [news, total] = await Promise.all([
-      News.find({ featured: false })
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .populate('author', 'name image'),
-      News.countDocuments({ featured: false })
-    ]);
-
-    const totalPages = Math.ceil(total / limit);
-
-    return NextResponse.json({
-      news,
-      featuredNews,
-      totalPages,
-      currentPage: page
-    });
-  } catch (error) {
-    console.error('Erro ao buscar notícias:', error);
-    return NextResponse.json(
-      { error: 'Erro ao buscar notícias' },
+      { 
+        error: 'Erro ao criar notícia',
+        details: error instanceof Error ? error.message : 'Erro desconhecido'
+      },
       { status: 500 }
     );
   }

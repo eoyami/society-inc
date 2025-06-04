@@ -1,9 +1,10 @@
-import { getNewsByCategory } from '@/app/lib/news';
-import NewsCard from '@/app/components/NewsCard';
+import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { connectDB } from '@/app/lib/mongodb';
 import Category from '@/app/models/Category';
+import NewsCard from '@/app/components/NewsCard';
 import Image from 'next/image';
+import { getNewsByCategory } from '@/app/lib/news';
 
 interface CategoryPageProps {
   params: {
@@ -11,19 +12,31 @@ interface CategoryPageProps {
   };
 }
 
+export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
+  const category = await Category.findOne({ slug: params.slug });
+
+  if (!category) {
+    return {
+      title: 'Categoria não encontrada',
+      description: 'A categoria que você está procurando não existe.'
+    };
+  }
+
+  return {
+    title: category.name,
+    description: `Notícias sobre ${category.name}`
+  };
+}
+
 export default async function CategoryPage({ params }: CategoryPageProps) {
   await connectDB();
   const category = await Category.findOne({ slug: params.slug });
-  
+
   if (!category) {
     notFound();
   }
 
   const news = await getNewsByCategory(params.slug);
-
-  if (!news || news.length === 0) {
-    notFound();
-  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
