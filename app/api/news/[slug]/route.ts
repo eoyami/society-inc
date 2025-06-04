@@ -3,10 +3,7 @@ import { connectDB } from '@/app/lib/mongodb';
 import News from '@/app/models/News';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/lib/auth';
-
-type Params = {
-  params: { slug: string };
-};
+import mongoose from 'mongoose';
 
 interface Author {
   _id: mongoose.Types.ObjectId;
@@ -27,15 +24,23 @@ interface News {
   updatedAt?: Date;
 }
 
-export async function GET(request: NextRequest, { params }: { params: any }) {
+
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ slug: string }> }
+) {
   try {
+    const { slug } = await context.params;
+
     await connectDB();
-    const news = await News.findOne({ slug: params.slug })
+    const news = await News.findOne({ slug })
       .populate('author', 'name username image')
       .populate('category', 'name color slug');
+
     if (!news) {
       return NextResponse.json({ error: 'Notícia não encontrada' }, { status: 404 });
     }
+
     return NextResponse.json(news);
   } catch (error) {
     console.error(error);
@@ -43,8 +48,15 @@ export async function GET(request: NextRequest, { params }: { params: any }) {
   }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: any }) {
+
+
+export async function PUT(
+  request: NextRequest,
+  context: { params: Promise<{ slug: string }> }
+) {
   try {
+    const { slug } = await context.params;
+
     await connectDB();
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== 'admin') {
@@ -52,7 +64,7 @@ export async function PUT(request: NextRequest, { params }: { params: any }) {
     }
     const data = await request.json();
     const news = await News.findOneAndUpdate(
-      { slug: params.slug },
+      { slug },
       data,
       { new: true }
     );
@@ -66,14 +78,19 @@ export async function PUT(request: NextRequest, { params }: { params: any }) {
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: any }) {
+export async function DELETE(
+  request: NextRequest,
+  context: { params: Promise<{ slug: string }> }
+) {
   try {
+    const { slug } = await context.params;
+
     await connectDB();
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== 'admin') {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
-    const news = await News.findOneAndDelete({ slug: params.slug });
+    const news = await News.findOneAndDelete({ slug });
     if (!news) {
       return NextResponse.json({ error: 'Notícia não encontrada' }, { status: 404 });
     }

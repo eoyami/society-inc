@@ -1,7 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { Metadata } from 'next';
-import { notFound } from 'next/navigation';
 import { connectDB } from '@/app/lib/mongodb';
 import News from '@/app/models/News';
 import { formatDate } from '@/app/lib/utils';
@@ -13,13 +12,21 @@ interface Author {
   image?: string;
 }
 
-interface News {
+interface Category {
+  _id: string;
+  name: string;
+  slug: string;
+  color: string;
+}
+
+interface NewsType {
   _id: string;
   title: string;
   slug: string;
   content: string;
   image: string;
   author: Author;
+  category: Category;
   views: number;
   excerpt: string;
   featured: boolean;
@@ -29,38 +36,47 @@ interface News {
 }
 
 type Params = {
-  params: { slug: string };
-  searchParams: { [key: string]: string | string[] | undefined };
+  params: Promise<{ slug: string }>;
 };
 
-export async function generateMetadata({ params }: Params): Promise<Metadata> {
-  const news: any = await News.findOne({ slug: params.slug })
+export async function generateMetadata(context: Params): Promise<Metadata> {
+  const { slug } = await context.params;
+  const news = await News.findOne({ slug })
     .populate('author', 'name username image')
     .populate('category', 'name color')
-    .lean();
+    .lean() as NewsType | null;
 
   if (!news) {
     return {
       title: 'Notícia não encontrada',
-      description: 'A notícia que você está procurando não existe.'
+      description: 'A notícia solicitada não foi encontrada.'
     };
   }
 
   return {
     title: news.title,
-    description: news.content.substring(0, 160)
+    description: news.excerpt,
+    openGraph: {
+      title: news.title,
+      description: news.excerpt,
+      images: news.image ? [news.image] : [],
+      type: 'article',
+      authors: [news.author.name]
+    }
   };
 }
 
-export default async function NewsPage({ params }: Params) {
+export default async function NewsPage(context: Params) {
+  const { slug } = await context.params;
   await connectDB();
-  const news: any = await News.findOne({ slug: params.slug })
+  
+  const news = await News.findOne({ slug })
     .populate('author', 'name username image')
     .populate('category', 'name color')
-    .lean();
+    .lean() as NewsType | null;
 
   if (!news) {
-    notFound();
+    return <div>Notícia não encontrada</div>;
   }
 
   // URL base para compartilhamento

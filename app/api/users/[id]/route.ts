@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/lib/auth';
-import connectDB from '@/app/lib/mongodb';
+import { connectDB } from '@/app/lib/mongodb';
 import User from '@/app/models/User';
-import Achievement from '@/app/models/Achievement';
-import News from '@/app/models/News';
-import mongoose from 'mongoose';
-import { ObjectId } from 'mongodb';
 
 // Função para gerar um username único baseado no nome
 async function generateUniqueUsername(name: string, userId: string) {

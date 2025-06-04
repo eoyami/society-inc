@@ -6,12 +6,12 @@ import Profile from '@/app/components/Profile';
 import { getNewsByAuthor } from '@/app/lib/news';
 
 type Params = {
-  params: { username: string };
-  searchParams: { [key: string]: string | string[] | undefined };
+  params: Promise<{ username: string }>;
 };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
-  const user = await User.findOne({ username: params.username });
+  const { username } = await params;
+  const user = await User.findOne({ username });
 
   if (!user) {
     return {
@@ -27,8 +27,9 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 }
 
 export default async function UserPage({ params }: Params) {
+  const { username } = await params;
   await connectDB();
-  const user = await User.findOne({ username: params.username });
+  const user = await User.findOne({ username });
 
   if (!user) {
     notFound();

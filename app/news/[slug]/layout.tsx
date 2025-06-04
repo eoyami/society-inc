@@ -2,8 +2,7 @@ import { Metadata } from 'next';
 import { headers } from 'next/headers';
 
 type Params = {
-  params: { slug: string };
-  searchParams: { [key: string]: string | string[] | undefined };
+  params: Promise<{ slug: string }>;
 };
 
 async function getNews(slug: string) {
@@ -32,8 +31,9 @@ async function getNews(slug: string) {
   }
 }
 
-export async function generateMetadata({ params }: Params): Promise<Metadata> {
-  const news = await getNews(params.slug);
+export async function generateMetadata(context: Params): Promise<Metadata> {
+  const { slug } = await context.params;
+  const news = await getNews(slug);
 
   if (!news) {
     return {

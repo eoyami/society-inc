@@ -5,28 +5,14 @@ import { connectDB } from '@/app/lib/mongodb';
 import Category from '@/app/models/Category';
 import News from '@/app/models/News';
 import NewsCard from '@/app/components/NewsCard';
-import { Document } from 'mongoose';
 
 type Params = {
-  params: { slug: string };
-  searchParams: { [key: string]: string | string[] | undefined };
+  params: Promise<{ slug: string }>;
 };
 
-interface NewsDocument extends Document {
-  _id: any;
-  title: string;
-  slug: string;
-  content: string;
-  image: string;
-  views: number;
-  author: any;
-  category: any;
-  createdAt: Date;
-  updatedAt?: Date;
-}
-
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
-  const category = await Category.findOne({ slug: params.slug });
+  const { slug } = await params;
+  const category = await Category.findOne({ slug });
 
   if (!category) {
     return {
@@ -42,8 +28,9 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 }
 
 export default async function CategoryPage({ params }: Params) {
+  const { slug } = await params;
   await connectDB();
-  const category = await Category.findOne({ slug: params.slug });
+  const category = await Category.findOne({ slug });
 
   if (!category) {
     notFound();

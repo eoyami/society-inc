@@ -34,7 +34,7 @@ export async function GET() {
     return NextResponse.json({
       message: 'Notícias encontradas',
       count: news.length,
-      news: news.map(item => ({
+      news: news.map((item: any) => ({
         ...item,
         _id: item._id.toString(),
         createdAt: item.createdAt.toISOString(),
