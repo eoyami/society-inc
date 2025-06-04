@@ -4,6 +4,7 @@ import { Metadata } from 'next';
 import { connectDB } from '@/app/lib/mongodb';
 import News from '@/app/models/News';
 import { formatDate } from '@/app/lib/utils';
+import Comments from '@/app/components/Comments';
 
 interface Author {
   _id: string;
@@ -204,6 +205,9 @@ export default async function NewsPage(context: Params) {
           </div>
         </div>
       </footer>
+
+      {/* Seção de Comentários */}
+      <Comments newsSlug={news.slug} />
     </article>
   );
 } 

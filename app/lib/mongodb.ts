@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import '../models/User';
 import '../models/News';
 import '../models/Category';
+import '../models/Comment';
 
 interface MongooseCache {
   conn: typeof mongoose | null;
