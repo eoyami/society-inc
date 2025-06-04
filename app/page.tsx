@@ -34,12 +34,13 @@ export default async function Home() {
                 Últimas Notícias
               </h2>
               {news.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-6">
                   {news.map((newsItem: News) => (
                     <NewsCard 
                       key={newsItem._id} 
                       news={newsItem}
                       alt={`Imagem da notícia: ${newsItem.title}`}
+                      layout="list"
                     />
                   ))}
                 </div>

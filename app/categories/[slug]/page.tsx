@@ -10,6 +10,11 @@ type Params = {
   params: Promise<{ slug: string }>;
 };
 
+// Função para serializar os dados do MongoDB
+const serializeMongoData = (data: any) => {
+  return JSON.parse(JSON.stringify(data));
+};
+
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { slug } = await params;
   const category = await Category.findOne({ slug });
@@ -42,38 +47,42 @@ export default async function CategoryPage({ params }: Params) {
     .populate('category', 'name color')
     .lean();
 
+  // Serializar os dados antes de passar para o componente
+  const serializedNews = serializeMongoData(news);
+  const serializedCategory = serializeMongoData(category);
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Conteúdo da página */}
       <div className="relative h-64 w-full mb-8 rounded-lg overflow-hidden">
         <Image
-          src={category.image}
-          alt={category.name}
+          src={serializedCategory.image}
+          alt={serializedCategory.name}
           fill
           className="object-cover"
         />
         <div 
           className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"
-          style={{ backgroundColor: `${category.color}40` }}
+          style={{ backgroundColor: `${serializedCategory.color}40` }}
         />
         <div className="absolute bottom-0 left-0 right-0 p-8">
           <h1 className="text-4xl font-bold text-white capitalize mb-2">
-            {category.name}
+            {serializedCategory.name}
           </h1>
-          {category.description && (
+          {serializedCategory.description && (
             <p className="text-white/90 text-lg max-w-2xl">
-              {category.description}
+              {serializedCategory.description}
             </p>
           )}
           <p className="mt-4 text-white/80">
-            {news.length} {news.length === 1 ? 'notícia' : 'notícias'} nesta categoria
+            {serializedNews.length} {serializedNews.length === 1 ? 'notícia' : 'notícias'} nesta categoria
           </p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {news.map((newsItem: any) => (
-          <NewsCard key={newsItem._id.toString()} news={newsItem} />
+        {serializedNews.map((newsItem: any) => (
+          <NewsCard key={newsItem._id} news={newsItem} />
         ))}
       </div>
     </div>

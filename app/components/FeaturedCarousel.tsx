@@ -15,6 +15,13 @@ export default function FeaturedCarousel({ news }: FeaturedCarouselProps) {
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
 
+  // Função para remover tags HTML e limitar o texto
+  const stripHtml = (html: string) => {
+    const tmp = document.createElement('DIV');
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || '';
+  };
+
   // Configuração do swipe
   const minSwipeDistance = 50;
 
@@ -67,7 +74,7 @@ export default function FeaturedCarousel({ news }: FeaturedCarouselProps) {
   return (
     <div 
       ref={carouselRef}
-      className="relative h-[500px] overflow-hidden rounded-lg group"
+      className="relative h-[300px] sm:h-[400px] md:h-[500px] overflow-hidden rounded-lg group"
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
@@ -98,10 +105,10 @@ export default function FeaturedCarousel({ news }: FeaturedCarouselProps) {
                 </div>
               )}
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-              <div className="absolute bottom-0 left-0 right-0 p-8 text-white">
-                <h2 className="text-3xl font-bold mb-2 line-clamp-2">{news.title}</h2>
-                <p className="text-lg mb-4 line-clamp-2">{news.content.substring(0, 150)}...</p>
-                <div className="flex items-center text-sm">
+              <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 md:p-8 text-white">
+                <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2 line-clamp-2">{news.title}</h2>
+                <p className="text-sm sm:text-base md:text-lg mb-4 line-clamp-2">{stripHtml(news.content).substring(0, 150)}...</p>
+                <div className="flex items-center text-xs sm:text-sm">
                   <span className="mr-4">{new Date(news.createdAt).toLocaleDateString('pt-BR')}</span>
                   {news.category && (
                     <span
@@ -121,25 +128,25 @@ export default function FeaturedCarousel({ news }: FeaturedCarouselProps) {
       {/* Setas de navegação */}
       <button
         onClick={prevSlide}
-        className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center rounded-full bg-black/30 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-black/50 z-20"
+        className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-black/30 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-black/50 z-20"
         aria-label="Notícia anterior"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 sm:w-6 sm:h-6">
           <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
         </svg>
       </button>
       <button
         onClick={nextSlide}
-        className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center rounded-full bg-black/30 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-black/50 z-20"
+        className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-black/30 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-black/50 z-20"
         aria-label="Próxima notícia"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 sm:w-6 sm:h-6">
           <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
         </svg>
       </button>
 
       {/* Indicadores */}
-      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2 z-20">
+      <div className="absolute bottom-2 sm:bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-1 sm:space-x-2 z-20">
         {news.map((_, index) => (
           <button
             key={index}
@@ -148,7 +155,7 @@ export default function FeaturedCarousel({ news }: FeaturedCarouselProps) {
               e.stopPropagation();
               setCurrentIndex(index);
             }}
-            className={`w-2 h-2 rounded-full transition-colors ${
+            className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full transition-colors ${
               index === currentIndex ? 'bg-white' : 'bg-white/50'
             }`}
             aria-label={`Ir para slide ${index + 1}`}
