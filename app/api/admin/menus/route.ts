@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../../lib/auth';
-import { connectDB } from '../../../lib/mongodb';
+import { connectDB } from '@/app/lib/mongodb';
 import MenuItem from '../../../models/MenuItem';
 
 export async function GET() {

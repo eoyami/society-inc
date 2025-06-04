@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import connectDB from '@/app/lib/mongodb';
+import { connectDB } from '@/app/lib/mongodb';
 import Achievement from '@/app/models/Achievement';
 
 export async function GET(request: Request) {

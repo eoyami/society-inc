@@ -1,4 +1,4 @@
-import { connectDB } from './mongodb';
+import { connectDB } from '@/app/lib/mongodb';
 import User from '../models/User';
 import Achievement from '../models/Achievement';
 import mongoose from 'mongoose';

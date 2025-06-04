@@ -1,4 +1,4 @@
-import { connectDB } from '../lib/mongodb';
+import { connectDB } from '@/app/lib/mongodb';
 import News from '../models/News';
 
 export interface News {

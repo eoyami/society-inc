@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import connectDB from '@/app/lib/mongodb';
+import { connectDB } from '@/app/lib/mongodb';
 import Topic from '@/app/models/Topic';
 import { addPoints } from '@/app/lib/gamification';
 

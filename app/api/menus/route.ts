@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { connectDB } from '../../lib/mongodb';
+import { connectDB } from '@/app/lib/mongodb';
 import MenuItem from '../../models/MenuItem';
 
 export async function GET() {
