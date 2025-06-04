@@ -39,9 +39,6 @@ const categorySchema = new mongoose.Schema<ICategoryDocument>({
   toObject: { virtuals: true }
 });
 
-// Criar índice para busca por slug
-categorySchema.index({ slug: 1 });
-
 // Relação virtual com as notícias
 categorySchema.virtual('news', {
   ref: 'News',

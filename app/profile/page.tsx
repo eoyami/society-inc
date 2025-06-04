@@ -5,30 +5,33 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
 interface User {
-  id: string;
-  name: string;
-  email: string;
-  image?: string;
+  id?: string | null;
+  name?: string | null;
+  email?: string | null;
+  image?: string | null;
   role?: string;
   username: string;
   level: number;
   points: number;
 }
 
-export default function ProfilePage() {
-  const { data: session } = useSession();
+export default function ProfileRedirect() {
+  const { data: session, status } = useSession();
   const router = useRouter();
 
   useEffect(() => {
-    const user = session?.user as User | undefined;
+    if (status === 'loading') return;
 
-    if (!user?.username) {
+    if (!session?.user) {
       router.replace('/login');
       return;
     }
 
-    router.replace(`/profile/${user.username}`);
-  }, [session?.user, router]);
+    const user = session.user as User;
+    if (user.username) {
+      router.replace(`/profile/${user.username}`);
+    }
+  }, [session, status, router]);
 
   return (
     <div className="flex justify-center items-center min-h-screen">

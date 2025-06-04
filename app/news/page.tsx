@@ -38,8 +38,9 @@ export default function NewsPage() {
       setNews(data.news);
       setTotalPages(data.totalPages);
       setFeaturedNews(data.featuredNews);
-    } catch (err) {
+    } catch (err: any) {
       setError('Erro ao carregar notícias');
+      console.error(err);
     } finally {
       setLoading(false);
     }

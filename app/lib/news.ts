@@ -1,10 +1,9 @@
 import { connectDB } from '@/app/lib/mongodb';
 import News from '../models/News';
-import User from '../models/User';
 import Category from '../models/Category';
-import { Types } from 'mongoose';
+import { Types, Document } from 'mongoose';
 
-interface NewsDocument {
+interface NewsDocument extends Document {
   _id: Types.ObjectId;
   title: string;
   slug: string;
@@ -205,4 +204,29 @@ export async function getNewsByCategory(categorySlug: string, limit?: number): P
     console.error('Erro ao buscar notícias por categoria:', error);
     return [];
   }
+}
+
+export async function getNewsByAuthor(authorId: string) {
+  await connectDB();
+  const news = await News.find({ author: authorId })
+    .populate('author', 'name username image')
+    .populate('category', 'name color slug')
+    .sort({ createdAt: -1 })
+    .limit(6)
+    .lean();
+
+  return news.map((newsItem: any) => ({
+    ...newsItem,
+    _id: newsItem._id.toString(),
+    author: {
+      ...newsItem.author,
+      _id: newsItem.author._id.toString()
+    },
+    category: newsItem.category ? {
+      ...newsItem.category,
+      _id: newsItem.category._id.toString()
+    } : null,
+    createdAt: newsItem.createdAt.toISOString(),
+    updatedAt: newsItem.updatedAt?.toISOString()
+  }));
 } 

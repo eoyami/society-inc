@@ -1,31 +1,32 @@
 import { NextRequest } from 'next/server';
 import { connectDB } from '@/app/lib/mongodb';
-import mongoose from 'mongoose';
+import News from '@/app/models/News';
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { slug: string } }
-) {
+type Params = {
+  params: { slug: string };
+};
+
+export async function POST(request: NextRequest, { params }: Params) {
   try {
     await connectDB();
-    const result = await mongoose.model('News').updateOne(
-      { slug: params.slug },
-      { $inc: { views: 1 } }
-    );
+    const news = await News.findOne({ slug: params.slug });
 
-    if (result.matchedCount === 0) {
+    if (!news) {
       return new Response(JSON.stringify({ error: 'Notícia não encontrada' }), {
         status: 404,
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    const news = await mongoose.model('News').findOne({ slug: params.slug });
+    news.views += 1;
+    await news.save();
+
     return new Response(JSON.stringify({ views: news.views }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error) {
+    console.error('Erro ao registrar visualização:', error);
     return new Response(JSON.stringify({ error: 'Erro ao registrar visualização' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

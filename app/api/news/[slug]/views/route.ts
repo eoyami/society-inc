@@ -4,7 +4,7 @@ import mongoose from 'mongoose';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: any }
 ) {
   try {
     await connectDB();

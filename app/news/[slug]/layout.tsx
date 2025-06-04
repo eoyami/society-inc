@@ -1,11 +1,10 @@
 import { Metadata } from 'next';
 import { headers } from 'next/headers';
 
-interface Props {
-  params: {
-    slug: string;
-  };
-}
+type Params = {
+  params: { slug: string };
+  searchParams: { [key: string]: string | string[] | undefined };
+};
 
 async function getNews(slug: string) {
   try {
@@ -33,7 +32,7 @@ async function getNews(slug: string) {
   }
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const news = await getNews(params.slug);
 
   if (!news) {
@@ -61,5 +60,5 @@ export default function NewsLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return children;
+  return <>{children}</>;
 } 

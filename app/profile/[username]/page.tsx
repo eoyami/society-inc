@@ -1,85 +1,68 @@
+import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { connectDB } from '@/app/lib/mongodb';
 import User from '@/app/models/User';
-import News from '@/app/models/News';
 import Profile from '@/app/components/Profile';
+import { getNewsByAuthor } from '@/app/lib/news';
 
-interface News {
-  _id: string;
-  title: string;
-  excerpt: string;
-  image: string;
-  createdAt: string;
-  slug: string;
-}
+type Params = {
+  params: { username: string };
+  searchParams: { [key: string]: string | string[] | undefined };
+};
 
-interface User {
-  _id: string;
-  name: string;
-  username: string;
-  email: string;
-  image: string;
-  role: string;
-  points: number;
-  level: number;
-  achievements: Array<{
-    _id: string;
-    name: string;
-    description: string;
-    image: string;
-  }>;
-  coverImage?: string;
-  news?: News[];
-}
+export async function generateMetadata({ params }: Params): Promise<Metadata> {
+  const user = await User.findOne({ username: params.username });
 
-interface ProfilePageProps {
-  params: {
-    username: string;
+  if (!user) {
+    return {
+      title: 'Usuário não encontrado',
+      description: 'O usuário que você está procurando não existe.'
+    };
+  }
+
+  return {
+    title: `${user.name} (@${user.username})`,
+    description: `Perfil de ${user.name}`
   };
 }
 
-export default async function ProfilePage({ params }: ProfilePageProps) {
-  try {
-    await connectDB();
+export default async function UserPage({ params }: Params) {
+  await connectDB();
+  const user = await User.findOne({ username: params.username });
+
+  if (!user) {
+    notFound();
+  }
+
+  const news = await getNewsByAuthor(user._id);
+
+  // Converter o objeto Mongoose para um objeto JavaScript simples
+  const userData = {
+    ...user.toObject(),
+    _id: user._id.toString(),
+    createdAt: user.createdAt instanceof Date ? user.createdAt.toISOString() : user.createdAt,
+    updatedAt: user.updatedAt instanceof Date ? user.updatedAt.toISOString() : user.updatedAt
+  };
+
+  // Converter as notícias também
+  const newsData = news.map(item => {
+    const newsItem = typeof item.toObject === 'function' ? item.toObject() : item;
     
-    const user = await User.findOne({ username: params.username })
-      .select('-password')
-      .lean();
-
-    if (!user) {
-      notFound();
-    }
-
-    const news = await News.find({ author: user._id })
-      .sort({ createdAt: -1 })
-      .limit(6)
-      .lean();
-
-    // Serializar os dados do usuário
-    const serializedUser = {
-      ...user,
-      _id: user._id.toString(),
-      createdAt: user.createdAt?.toISOString(),
-      updatedAt: user.updatedAt?.toISOString(),
-      achievements: user.achievements?.map(achievement => ({
-        ...achievement,
-        _id: achievement._id.toString()
-      }))
-    };
-
-    // Serializar as notícias
-    const serializedNews = news.map(newsItem => ({
+    return {
       ...newsItem,
       _id: newsItem._id.toString(),
-      category: newsItem.category.toString(),
-      author: newsItem.author.toString(),
-      createdAt: newsItem.createdAt.toISOString(),
-      updatedAt: newsItem.updatedAt?.toISOString()
-    }));
+      author: {
+        ...(typeof newsItem.author.toObject === 'function' ? newsItem.author.toObject() : newsItem.author),
+        _id: newsItem.author._id.toString()
+      },
+      category: newsItem.category ? {
+        ...(typeof newsItem.category.toObject === 'function' ? newsItem.category.toObject() : newsItem.category),
+        _id: newsItem.category._id.toString()
+      } : null,
+      createdAt: newsItem.createdAt instanceof Date ? newsItem.createdAt.toISOString() : newsItem.createdAt,
+      updatedAt: newsItem.updatedAt instanceof Date ? newsItem.updatedAt.toISOString() : newsItem.updatedAt
+    };
+  });
 
-    return <Profile user={serializedUser} news={serializedNews} />;
-  } catch (error) {
-    console.error('Erro ao carregar perfil:', error);
-    throw new Error('Erro ao carregar perfil do usuário');
-  }
+  return <Profile user={userData} news={newsData} />;
 } 

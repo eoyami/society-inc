@@ -1,6 +1,12 @@
 import { NextRequest } from 'next/server';
 import { connectDB } from '@/app/lib/mongodb';
-import mongoose from 'mongoose';
+import News from '@/app/models/News';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/lib/auth';
+
+type Params = {
+  params: { slug: string };
+};
 
 interface Author {
   _id: mongoose.Types.ObjectId;
@@ -21,17 +27,13 @@ interface News {
   updatedAt?: Date;
 }
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { slug: string } }
-) {
+export async function GET(request: NextRequest, { params }: Params) {
   try {
     await connectDB();
-    const news = await mongoose.model<News>('News').findOne({
-      slug: params.slug
-    })
-    .populate('author', 'name username image')
-    .lean();
+    const news = await News.findOne({ slug: params.slug })
+      .populate('author', 'name username image')
+      .populate('category', 'name color')
+      .lean();
 
     if (!news) {
       return new Response(JSON.stringify({ error: 'Notícia não encontrada' }), {
@@ -67,31 +69,50 @@ export async function GET(
   }
 }
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { slug: string } }
-) {
+export async function PUT(request: NextRequest, { params }: Params) {
   try {
+    const session = await getServerSession(authOptions);
+
+    if (!session) {
+      return new Response(JSON.stringify({ error: 'Não autorizado' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     await connectDB();
-    const body = await request.json();
+    const news = await News.findOne({ slug: params.slug });
 
-    const result = await mongoose.model('News').updateOne(
-      { slug: params.slug },
-      { $set: body }
-    );
-
-    if (result.matchedCount === 0) {
+    if (!news) {
       return new Response(JSON.stringify({ error: 'Notícia não encontrada' }), {
         status: 404,
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    return new Response(JSON.stringify({ message: 'Notícia atualizada com sucesso' }), {
+    if (news.author.toString() !== session.user.id) {
+      return new Response(JSON.stringify({ error: 'Não autorizado' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    const data = await request.json();
+    const updatedNews = await News.findByIdAndUpdate(
+      news._id,
+      { $set: data },
+      { new: true }
+    )
+      .populate('author', 'name username image')
+      .populate('category', 'name color')
+      .lean();
+
+    return new Response(JSON.stringify(updatedNews), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error) {
+    console.error('Erro ao atualizar notícia:', error);
     return new Response(JSON.stringify({ error: 'Erro ao atualizar notícia' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
@@ -99,28 +120,42 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { slug: string } }
-) {
+export async function DELETE(request: NextRequest, { params }: Params) {
   try {
-    await connectDB();
-    const result = await mongoose.model('News').deleteOne({
-      slug: params.slug
-    });
+    const session = await getServerSession(authOptions);
 
-    if (result.deletedCount === 0) {
+    if (!session) {
+      return new Response(JSON.stringify({ error: 'Não autorizado' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    await connectDB();
+    const news = await News.findOne({ slug: params.slug });
+
+    if (!news) {
       return new Response(JSON.stringify({ error: 'Notícia não encontrada' }), {
         status: 404,
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
+    if (news.author.toString() !== session.user.id) {
+      return new Response(JSON.stringify({ error: 'Não autorizado' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    await News.findByIdAndDelete(news._id);
+
     return new Response(JSON.stringify({ message: 'Notícia excluída com sucesso' }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error) {
+    console.error('Erro ao excluir notícia:', error);
     return new Response(JSON.stringify({ error: 'Erro ao excluir notícia' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
