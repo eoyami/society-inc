@@ -6,16 +6,20 @@ const newsSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
+  slug: {
+    type: String,
+    required: true,
+    unique: true
+  },
   content: {
     type: String,
     required: true
   },
-  excerpt: {
-    type: String,
-    required: true,
-    trim: true
-  },
   image: {
+    type: String,
+    required: true
+  },
+  category: {
     type: String,
     required: true
   },
@@ -28,30 +32,27 @@ const newsSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  excerpt: {
+    type: String,
+    required: true,
+    trim: true
+  },
   featured: {
     type: Boolean,
     default: false
   },
-  category: {
-    type: String,
-    default: 'Geral'
-  },
   tags: [{
     type: String,
     trim: true
-  }],
-  slug: {
-    type: String,
-    required: true,
-    unique: true
-  }
+  }]
 }, {
   timestamps: true
 });
 
-// Criar índices para ordenação por data e visualizações
+// Criar índices para busca
+newsSchema.index({ category: 1 });
+newsSchema.index({ author: 1 });
 newsSchema.index({ createdAt: -1 });
-newsSchema.index({ views: -1 });
 
 const News = mongoose.models.News || mongoose.model('News', newsSchema);
 

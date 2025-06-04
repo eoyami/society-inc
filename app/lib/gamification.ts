@@ -1,6 +1,7 @@
 import { connectDB } from './mongodb';
 import User from '../models/User';
 import Achievement from '../models/Achievement';
+import mongoose from 'mongoose';
 
 const POINTS = {
   CREATE_NEWS: 10,

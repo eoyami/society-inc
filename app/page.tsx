@@ -30,7 +30,14 @@ export default async function Home() {
             {news.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {news.map((newsItem: News) => (
-                  <NewsCard key={newsItem._id} news={newsItem} />
+                  <NewsCard 
+                    key={newsItem._id} 
+                    news={{
+                      ...newsItem,
+                      updatedAt: newsItem.updatedAt || new Date().toISOString()
+                    }}
+                    alt={`Imagem da notícia: ${newsItem.title}`}
+                  />
                 ))}
               </div>
             ) : (

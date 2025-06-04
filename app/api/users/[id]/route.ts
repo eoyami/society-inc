@@ -9,6 +9,8 @@ import mongoose from 'mongoose';
 
 // Função para gerar um username único baseado no nome
 async function generateUniqueUsername(name: string, userId: string) {
+  console.log('Gerando username para:', { name, userId });
+  
   // Remove acentos e caracteres especiais
   const baseUsername = name
     .toLowerCase()
@@ -17,11 +19,15 @@ async function generateUniqueUsername(name: string, userId: string) {
     .replace(/[^a-z0-9]/g, '')
     .slice(0, 20); // Limita a 20 caracteres
 
+  console.log('Username base gerado:', baseUsername);
+
   let username = baseUsername;
   let counter = 1;
   let isUnique = false;
 
   while (!isUnique) {
+    console.log('Verificando disponibilidade do username:', username);
+    
     const existingUser = await User.findOne({ 
       username,
       _id: { $ne: userId }
@@ -29,9 +35,11 @@ async function generateUniqueUsername(name: string, userId: string) {
 
     if (!existingUser) {
       isUnique = true;
+      console.log('Username disponível:', username);
     } else {
       username = `${baseUsername}${counter}`;
       counter++;
+      console.log('Username já existe, tentando:', username);
     }
   }
 
@@ -40,12 +48,12 @@ async function generateUniqueUsername(name: string, userId: string) {
 
 export async function GET(
   request: Request,
-  params: { params: { id: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params.params;
+    const { id } = params;
 
-    console.log('Iniciando busca de usuário...');
+    console.log('=== Iniciando busca de usuário ===');
     console.log('ID do usuário:', id);
 
     const session = await getServerSession(authOptions);
@@ -66,7 +74,7 @@ export async function GET(
     }
 
     console.log('Buscando usuário no DB...', id);
-    const user = await User.findById(id)
+    let user = await User.findById(id)
       .select('-password')
       .populate('achievements');
 
@@ -75,13 +83,27 @@ export async function GET(
       return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 });
     }
 
+    console.log('Usuário encontrado:', {
+      id: user._id,
+      name: user.name,
+      username: user.username,
+      email: user.email
+    });
+
     // Se o usuário não tem username, gera um baseado no nome
     if (!user.username) {
-      user.username = await generateUniqueUsername(user.name, id);
-      await user.save();
+      console.log('Gerando username para usuário...');
+      const username = await generateUniqueUsername(user.name, id);
+      user = await User.findByIdAndUpdate(
+        id,
+        { username },
+        { new: true }
+      ).select('-password').populate('achievements');
+      console.log('Username gerado:', username);
     }
 
     // Buscar as notícias do usuário
+    console.log('Buscando notícias do usuário...');
     const news = await News.find({ author: id })
       .select('title excerpt image createdAt slug')
       .sort({ createdAt: -1 })
@@ -92,10 +114,19 @@ export async function GET(
     console.log('Notícias encontradas:', news.length);
 
     const userData = user.toObject();
-    return NextResponse.json({
+    const response = {
       ...userData,
       news
+    };
+
+    console.log('Dados do usuário preparados:', {
+      id: response._id,
+      name: response.name,
+      username: response.username,
+      newsCount: response.news.length
     });
+
+    return NextResponse.json(response);
   } catch (error) {
     console.error('Erro ao buscar usuário:', error);
     return NextResponse.json({ error: 'Erro ao buscar usuário' }, { status: 500 });
@@ -118,27 +149,28 @@ export async function PUT(
     await connectDB();
 
     // Busca o usuário atual
-    const user = await User.findById(id);
+    let user = await User.findById(id);
     if (!user) {
       return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 });
     }
 
     // Se o usuário não tem username, gera um baseado no nome
     if (!user.username) {
-      data.username = await generateUniqueUsername(data.name || user.name, id);
+      const username = await generateUniqueUsername(data.name || user.name, id);
+      data.username = username;
     }
 
     // Atualiza o usuário
-    const updatedUser = await User.findByIdAndUpdate(
+    user = await User.findByIdAndUpdate(
       id,
       { 
         ...data,
         username: data.username || user.username // Garante que o username não seja removido
       },
       { new: true }
-    ).select('-password');
+    ).select('-password').populate('achievements');
 
-    if (!updatedUser) {
+    if (!user) {
       return NextResponse.json({ error: 'Erro ao atualizar usuário' }, { status: 500 });
     }
 
@@ -150,7 +182,7 @@ export async function PUT(
       .lean();
 
     return NextResponse.json({
-      ...updatedUser.toObject(),
+      ...user.toObject(),
       news
     });
   } catch (error) {

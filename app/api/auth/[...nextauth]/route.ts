@@ -2,21 +2,20 @@ import NextAuth, { AuthOptions, DefaultUser } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { connectDB } from '@/app/lib/mongodb';
-import User, { IUserDocument } from '@/app/models/User';
 import bcrypt from 'bcryptjs';
-import { JWT } from 'next-auth/jwt';
-import { Session } from 'next-auth';
-import { Account, Profile, CallbacksOptions, DefaultSession } from 'next-auth';
-import { ObjectId } from 'mongoose';
+import { DefaultSession } from 'next-auth';
+import User from '@/app/models/User';
 
 // Extend the User type to include the role
 declare module 'next-auth' {
-  interface User extends DefaultUser {
-    role?: string;
+  interface User {
+    role: string;
   }
 
   interface Session extends DefaultSession {
     user: {
+      level: number;
+      points: number;
       id?: string | null;
       name?: string | null;
       email?: string | null;
@@ -28,8 +27,8 @@ declare module 'next-auth' {
 
 declare module 'next-auth/jwt' {
   interface JWT {
-    id?: string;
-    role?: string;
+    id: string;
+    role: string;
   }
 }
 

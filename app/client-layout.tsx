@@ -52,8 +52,8 @@ export default function ClientLayout({
       <div key={item._id} className="relative group h-full flex items-center">
         <Link
           href={item.url}
-          className={`border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-3 py-2 border-b-2 text-sm font-medium ${
-            isActive ? 'border-blue-500 text-blue-600' : ''
+          className={`border-transparent text-gray-700 hover:text-gray-900 hover:border-gray-300 inline-flex items-center px-3 py-2 border-b-2 text-sm font-medium ${
+            isActive ? 'border-blue-600 text-blue-700 font-semibold' : ''
           }`}
         >
           {item.label}
@@ -74,13 +74,13 @@ export default function ClientLayout({
           )}
         </Link>
         {hasChildren && (
-          <div className="absolute left-0 top-full mt-1 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+          <div className="absolute left-0 top-full mt-1 w-48 rounded-md shadow-lg bg-white ring-1 ring-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
             <div className="py-1">
               {item.children.map((child) => (
                 <Link
                   key={child._id}
                   href={child.url}
-                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900"
                 >
                   {child.label}
                 </Link>
@@ -98,13 +98,13 @@ export default function ClientLayout({
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <nav className="bg-white shadow-sm">
+    <div className="min-h-screen flex flex-col bg-gray-50">
+      <nav className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex">
               <div className="flex-shrink-0 flex items-center">
-                <Link href="/" className="text-xl font-bold text-gray-900">
+                <Link href="/" className="text-xl font-bold text-gray-800">
                   Society
                 </Link>
               </div>
@@ -117,7 +117,7 @@ export default function ClientLayout({
             <div className="sm:hidden flex items-center">
               <button
                 type="button"
-                className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+                className="inline-flex items-center justify-center p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
               >
                 <span className="sr-only">Abrir menu</span>
@@ -156,14 +156,14 @@ export default function ClientLayout({
                   {session.user?.role === 'admin' && (
                     <Link
                       href="/admin"
-                      className="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium"
+                      className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
                     >
                       Admin
                     </Link>
                   )}
                   <Link
                     href="/profile"
-                    className={`text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium ${
+                    className={`text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium ${
                       pathname === '/profile' ? 'text-blue-600 font-medium' : ''
                     }`}
                   >
@@ -180,7 +180,7 @@ export default function ClientLayout({
                 <>
                   <Link
                     href="/login"
-                    className="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium"
+                    className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
                   >
                     Entrar
                   </Link>
@@ -205,8 +205,8 @@ export default function ClientLayout({
                   href={item.url}
                   className={`block pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
                     pathname === item.url
-                      ? 'border-blue-500 text-blue-700 bg-blue-50'
-                      : 'border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700'
+                      ? 'border-blue-600 text-blue-700 bg-blue-50 font-semibold'
+                      : 'border-transparent text-gray-700 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-900'
                   }`}
                 >
                   {item.label}
@@ -217,7 +217,7 @@ export default function ClientLayout({
                       <Link
                         key={child._id}
                         href={child.url}
-                        className="block pl-3 pr-4 py-2 text-sm text-gray-500 hover:bg-gray-50 hover:text-gray-700"
+                        className="block pl-3 pr-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900"
                       >
                         {child.label}
                       </Link>

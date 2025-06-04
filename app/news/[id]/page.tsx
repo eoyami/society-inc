@@ -35,7 +35,7 @@ export default function NewsPage() {
         const viewedNews = localStorage.getItem('viewedNews');
         const viewedNewsData = viewedNews ? JSON.parse(viewedNews) : {};
         
-        const lastView = viewedNewsData[params.id];
+        const lastView = viewedNewsData[params.id as string];
         const now = new Date().getTime();
         const oneDay = 24 * 60 * 60 * 1000; // 24 horas em milissegundos
 
@@ -47,7 +47,7 @@ export default function NewsPage() {
           
           if (viewResponse.ok) {
             // Atualizar o cache com a nova visualização
-            viewedNewsData[params.id] = now;
+            viewedNewsData[params.id as string] = now;
             localStorage.setItem('viewedNews', JSON.stringify(viewedNewsData));
             
             // Atualizar o contador na UI

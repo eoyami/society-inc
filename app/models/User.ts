@@ -12,17 +12,23 @@ export interface IUserDocument extends Document {
   points: number;
   level: number;
   achievements: mongoose.Schema.Types.ObjectId[];
+  news: mongoose.Schema.Types.ObjectId[];
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const userSchema = new mongoose.Schema<IUserDocument>({
   name: {
     type: String,
     required: true,
+    trim: true,
   },
   email: {
     type: String,
     required: true,
     unique: true,
+    trim: true,
+    lowercase: true,
   },
   username: {
     type: String,
@@ -33,6 +39,7 @@ const userSchema = new mongoose.Schema<IUserDocument>({
   },
   password: {
     type: String,
+    required: true,
   },
   image: {
     type: String,
@@ -56,6 +63,11 @@ const userSchema = new mongoose.Schema<IUserDocument>({
   achievements: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Achievement',
+  }],
+  news: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'News',
+    default: [],
   }],
 }, {
   timestamps: true,

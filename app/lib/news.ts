@@ -2,6 +2,7 @@ import { connectDB } from '../lib/mongodb';
 import News from '../models/News';
 
 export interface News {
+  updatedAt: string;
   _id: string;
   title: string;
   content: string;

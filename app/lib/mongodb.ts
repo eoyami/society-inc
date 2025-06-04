@@ -19,12 +19,23 @@ export async function connectDB() {
 
   if (!cached.promise) {
     const opts = {
-      bufferCommands: false,
+      bufferCommands: true,
+      maxPoolSize: 10,
+      minPoolSize: 5,
+      maxIdleTimeMS: 60000,
+      socketTimeoutMS: 45000,
+      connectTimeoutMS: 10000,
     };
 
-    cached.promise = mongoose.connect(MONGODB_URI!, opts).then((mongoose) => {
-      return mongoose;
-    });
+    cached.promise = mongoose.connect(MONGODB_URI!, opts)
+      .then((mongoose) => {
+        console.log('Conexão com MongoDB estabelecida com sucesso');
+        return mongoose;
+      })
+      .catch((error) => {
+        console.error('Erro ao conectar com MongoDB:', error);
+        throw error;
+      });
   }
 
   try {

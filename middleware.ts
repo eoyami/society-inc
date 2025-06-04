@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { JWT } from 'next-auth/jwt';
 
 interface Token extends JWT {
-  role?: string;
+  role: string;
 }
 
 export default withAuth(

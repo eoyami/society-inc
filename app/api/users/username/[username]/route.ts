@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { connectDB } from '../../../../lib/mongodb';
+import { connectDB } from '@/app/lib/db';
 import User from '@/app/models/User';
 import News from '@/app/models/News';
 import { authOptions } from '../../../auth/[...nextauth]/route';
 
 export async function GET(
   request: Request,
-  { params }: { params: { username: string } }
+  context: { params: { username: string } }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -20,11 +20,11 @@ export async function GET(
     }
 
     console.log('Iniciando busca de usuário por username...');
-    console.log('Username:', params.username);
+    console.log('Username:', context.params.username);
 
     await connectDB();
 
-    const user = await User.findOne({ username: params.username })
+    const user = await User.findOne({ username: context.params.username })
       .select('-password')
       .lean();
 
