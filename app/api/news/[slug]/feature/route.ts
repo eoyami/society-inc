@@ -1,83 +1,49 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/app/lib/mongodb';
 import News from '@/app/models/News';
-import { getServerSession } from 'next-auth';
+import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/lib/auth';
 
-type Params = {
-  params: { slug: string };
-};
-
-export async function POST(request: NextRequest, { params }: Params) {
+export async function POST(request: NextRequest, { params }: { params: any }) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session || session.user.role !== 'admin') {
-      return new Response(JSON.stringify({ error: 'Não autorizado' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
     await connectDB();
-    const news = await News.findOne({ slug: params.slug });
-
-    if (!news) {
-      return new Response(JSON.stringify({ error: 'Notícia não encontrada' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.role !== 'admin') {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
-
-    news.featured = true;
-    await news.save();
-
-    return new Response(JSON.stringify({ message: 'Notícia destacada com sucesso' }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    const news = await News.findOneAndUpdate(
+      { slug: params.slug },
+      { featured: true },
+      { new: true }
+    );
+    if (!news) {
+      return NextResponse.json({ error: 'Notícia não encontrada' }, { status: 404 });
+    }
+    return NextResponse.json({ message: 'Notícia destacada com sucesso' });
   } catch (error) {
-    console.error('Erro ao destacar notícia:', error);
-    return new Response(JSON.stringify({ error: 'Erro ao destacar notícia' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    console.error(error);
+    return NextResponse.json({ error: 'Erro ao destacar notícia' }, { status: 500 });
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: Params) {
+export async function DELETE(request: NextRequest, { params }: { params: any }) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session || session.user.role !== 'admin') {
-      return new Response(JSON.stringify({ error: 'Não autorizado' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
     await connectDB();
-    const news = await News.findOne({ slug: params.slug });
-
-    if (!news) {
-      return new Response(JSON.stringify({ error: 'Notícia não encontrada' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.role !== 'admin') {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
-
-    news.featured = false;
-    await news.save();
-
-    return new Response(JSON.stringify({ message: 'Notícia removida dos destaques com sucesso' }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    const news = await News.findOneAndUpdate(
+      { slug: params.slug },
+      { featured: false },
+      { new: true }
+    );
+    if (!news) {
+      return NextResponse.json({ error: 'Notícia não encontrada' }, { status: 404 });
+    }
+    return NextResponse.json({ message: 'Notícia removida dos destaques com sucesso' });
   } catch (error) {
-    console.error('Erro ao remover notícia dos destaques:', error);
-    return new Response(JSON.stringify({ error: 'Erro ao remover notícia dos destaques' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    console.error(error);
+    return NextResponse.json({ error: 'Erro ao remover destaque da notícia' }, { status: 500 });
   }
 } 
