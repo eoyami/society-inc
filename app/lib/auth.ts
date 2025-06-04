@@ -15,24 +15,32 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
+          console.log('Credenciais ausentes');
           throw new Error('Email e senha são obrigatórios');
         }
 
         try {
+          console.log('Tentando conectar ao MongoDB...');
           await connectDB();
+          console.log('Conexão com MongoDB estabelecida');
 
+          console.log('Buscando usuário...');
           const user = await User.findOne({ email: credentials.email });
 
           if (!user) {
+            console.log('Usuário não encontrado');
             throw new Error('Usuário não encontrado');
           }
 
+          console.log('Verificando senha...');
           const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
 
           if (!isPasswordValid) {
+            console.log('Senha inválida');
             throw new Error('Senha inválida');
           }
 
+          console.log('Autenticação bem-sucedida');
           return {
             id: user._id.toString(),
             email: user.email,
@@ -43,7 +51,7 @@ export const authOptions: NextAuthOptions = {
             points: user.points,
           };
         } catch (error) {
-          console.error('Erro na autenticação:', error);
+          console.error('Erro detalhado na autenticação:', error);
           throw new Error('Erro ao autenticar usuário');
         }
       }
@@ -80,7 +88,19 @@ export const authOptions: NextAuthOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 dias
   },
   secret: process.env.NEXTAUTH_SECRET,
-  debug: process.env.NODE_ENV === 'development',
+  debug: true,
+  trustHost: true,
+  logger: {
+    error(code, metadata) {
+      console.error('NextAuth Error:', code, metadata);
+    },
+    warn(code) {
+      console.warn('NextAuth Warning:', code);
+    },
+    debug(code, metadata) {
+      console.debug('NextAuth Debug:', code, metadata);
+    }
+  }
 };
 
 export default NextAuth(authOptions); 
