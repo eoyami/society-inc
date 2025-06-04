@@ -1,13 +1,12 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/lib/auth';
-import { connectDB } from '@/app/lib/mongodb';
+import connectDB from '@/app/lib/mongodb';
 import User from '@/app/models/User';
 import Achievement from '@/app/models/Achievement';
 import News from '@/app/models/News';
 import mongoose from 'mongoose';
 import { ObjectId } from 'mongodb';
-import { NextResponse } from 'next/server';
 
 // Função para gerar um username único baseado no nome
 async function generateUniqueUsername(name: string, userId: string) {
@@ -48,123 +47,59 @@ async function generateUniqueUsername(name: string, userId: string) {
   return username;
 }
 
-export async function GET(
-  request: NextRequest,
-  { params }: any
-) {
+export async function GET(request: NextRequest, { params }: { params: any }) {
   try {
     await connectDB();
-    const user = await mongoose.model('User').findOne({ _id: new ObjectId(params.id) });
-
+    const user = await User.findById(params.id)
+      .select('-password')
+      .populate('achievements');
     if (!user) {
-      return new Response(JSON.stringify({ error: 'Usuário não encontrado' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 });
     }
-
-    return new Response(JSON.stringify(user), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return NextResponse.json(user);
   } catch (error) {
-    return new Response(JSON.stringify({ error: 'Erro ao buscar usuário' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    console.error(error);
+    return NextResponse.json({ error: 'Erro ao buscar usuário' }, { status: 500 });
   }
 }
 
-export async function PUT(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: NextRequest, { params }: { params: any }) {
   try {
+    await connectDB();
     const session = await getServerSession(authOptions);
-
-    if (!session) {
-      return NextResponse.json(
-        { error: 'Não autorizado' },
-        { status: 401 }
-      );
+    if (!session || session.user.id !== params.id) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
-
-    await connectDB();
     const data = await request.json();
-
-    // Buscar o usuário pelo username
-    const user = await User.findOne({ username: params.id });
-    
+    const user = await User.findByIdAndUpdate(
+      params.id,
+      data,
+      { new: true }
+    ).select('-password');
     if (!user) {
-      return NextResponse.json(
-        { error: 'Usuário não encontrado' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 });
     }
-
-    // Verificar se o usuário está tentando editar seu próprio perfil ou é admin
-    if (session.user.id !== user._id.toString() && session.user.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Não autorizado' },
-        { status: 401 }
-      );
-    }
-
-    // Atualizar o usuário usando o _id encontrado
-    const result = await User.updateOne(
-      { _id: user._id },
-      { $set: data }
-    );
-
-    if (result.matchedCount === 0) {
-      return NextResponse.json(
-        { error: 'Usuário não encontrado' },
-        { status: 404 }
-      );
-    }
-
-    // Buscar o usuário atualizado
-    const updatedUser = await User.findOne({ _id: user._id });
-
-    return NextResponse.json(updatedUser);
+    return NextResponse.json(user);
   } catch (error) {
-    console.error('Erro ao atualizar usuário:', error);
-    return NextResponse.json(
-      { error: 'Erro ao atualizar usuário' },
-      { status: 500 }
-    );
+    console.error(error);
+    return NextResponse.json({ error: 'Erro ao atualizar usuário' }, { status: 500 });
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: any
-) {
-  const session = await getServerSession(authOptions);
-
-  if (!session || session.user.role !== 'admin') {
-    return new Response(JSON.stringify({ error: 'Não autorizado' }), { status: 401 });
-  }
-
+export async function DELETE(request: NextRequest, { params }: { params: any }) {
   try {
     await connectDB();
-    const result = await mongoose.model('User').deleteOne({ _id: new ObjectId(params.id) });
-
-    if (result.deletedCount === 0) {
-      return new Response(JSON.stringify({ error: 'Usuário não encontrado' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.id !== params.id) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
-
-    return new Response(JSON.stringify({ message: 'Usuário excluído com sucesso' }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    const user = await User.findByIdAndDelete(params.id);
+    if (!user) {
+      return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 });
+    }
+    return NextResponse.json({ message: 'Usuário excluído com sucesso' });
   } catch (error) {
-    return new Response(JSON.stringify({ error: 'Erro ao excluir usuário' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    console.error(error);
+    return NextResponse.json({ error: 'Erro ao excluir usuário' }, { status: 500 });
   }
 } 
