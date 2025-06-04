@@ -24,7 +24,7 @@ export async function GET(
       { slug: id },
       { $inc: { views: 1 } },
       { new: true }
-    ).populate('author', 'name image');
+    ).populate('author', 'name image username');
 
     if (!news) {
       return NextResponse.json(

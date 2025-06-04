@@ -49,10 +49,7 @@ const newsSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Criar índice para busca por slug
-newsSchema.index({ slug: 1 });
-
-// Criar índice para ordenação por data e visualizações
+// Criar índices para ordenação por data e visualizações
 newsSchema.index({ createdAt: -1 });
 newsSchema.index({ views: -1 });
 

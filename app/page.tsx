@@ -20,26 +20,33 @@ export default async function Home() {
         <FeaturedCarousel featuredNews={featuredNews} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Lista Principal de Notícias */}
-        <div className="lg:col-span-3">
-          <h2 className="text-2xl font-bold text-gray-900 mb-8">
-            Últimas Notícias
-          </h2>
-          {news.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {news.map((newsItem: News) => (
-                <NewsCard key={newsItem._id} news={newsItem} />
-              ))}
-            </div>
-          ) : (
-            <p className="text-gray-500 text-center py-8">Nenhuma notícia encontrada</p>
-          )}
+        <div className="lg:col-span-8">
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-8">
+              Últimas Notícias
+            </h2>
+            {news.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {news.map((newsItem: News) => (
+                  <NewsCard key={newsItem._id} news={newsItem} />
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-500 text-center py-8">Nenhuma notícia encontrada</p>
+            )}
+          </div>
         </div>
 
         {/* Menu Lateral */}
-        <div className="lg:col-span-1">
-          <PopularNews popularNews={popularNews} />
+        <div className="lg:col-span-4">
+          <div className="bg-white rounded-lg shadow-sm p-6 sticky top-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-8">
+              Notícias Populares
+            </h2>
+            <PopularNews popularNews={popularNews} />
+          </div>
         </div>
       </div>
     </div>

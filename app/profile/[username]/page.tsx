@@ -1,11 +1,10 @@
 'use client';
 
+import { useEffect, useState, use } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import EditProfileModal from '@/app/components/EditProfileModal';
 
 interface News {
   _id: string;
@@ -19,12 +18,12 @@ interface News {
 interface User {
   _id: string;
   name: string;
+  username: string;
   email: string;
   image: string;
   role: string;
   points: number;
   level: number;
-  username: string;
   achievements: Array<{
     _id: string;
     name: string;
@@ -35,81 +34,35 @@ interface User {
   news?: News[];
 }
 
-export default function ProfilePage() {
-  const { data: session, status, update } = useSession();
+export default function UserProfilePage({ params }: { params: Promise<{ username: string }> }) {
+  const { username } = use(params);
+  const { data: session, status } = useSession();
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
-    // Só redireciona se a sessão estiver carregada e não existir
     if (status === 'unauthenticated') {
       router.push('/login');
       return;
     }
 
-    // Só busca os dados do usuário se a sessão estiver carregada e autenticada
-    if (status === 'authenticated' && session?.user?.id) {
-      const fetchUser = async () => {
-        try {
-          const response = await fetch(`/api/users/${session.user.id}`);
-          if (!response.ok) throw new Error('Erro ao carregar perfil');
-          const data = await response.json();
-          setUser(data);
-        } catch (err) {
-          setError('Erro ao carregar perfil');
-        } finally {
-          setLoading(false);
-        }
-      };
+    const fetchUser = async () => {
+      try {
+        const response = await fetch(`/api/users/username/${username}`);
+        if (!response.ok) throw new Error('Erro ao carregar perfil');
+        const data = await response.json();
+        setUser(data);
+      } catch (err) {
+        setError('Erro ao carregar perfil');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-      fetchUser();
-    }
-  }, [session, status, router]);
-
-  const openModal = () => {
-    setIsModalOpen(true);
-  };
-
-  const closeModal = () => {
-    setIsModalOpen(false);
-  };
-
-  const handleSaveProfile = async (updatedUser: { name: string; image?: string; coverImage?: string }) => {
-    if (!session?.user?.id) return;
-
-    try {
-      const response = await fetch(`/api/users/${session.user.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updatedUser),
-      });
-
-      if (!response.ok) throw new Error('Erro ao atualizar perfil');
-
-      const updatedUserData = await response.json();
-      setUser(updatedUserData);
-
-      // Atualiza a sessão com os novos dados
-      await update({
-        ...session,
-        user: {
-          ...session.user,
-          name: updatedUser.name,
-          image: updatedUser.image || session.user.image,
-        },
-      });
-
-      console.log('Perfil atualizado com sucesso!');
-    } catch (err) {
-      console.error('Erro ao salvar perfil:', err);
-      throw err;
-    }
-  };
+    fetchUser();
+  }, [username, status, router]);
 
   if (status === 'loading' || loading) {
     return (
@@ -140,12 +93,6 @@ export default function ProfilePage() {
         ) : (
           <div className="w-full h-full bg-gray-300 flex items-center justify-center text-gray-600">Sem capa</div>
         )}
-        <button 
-          className="absolute top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 z-10"
-          onClick={openModal}
-        >
-          Editar Perfil
-        </button>
       </div>
 
       <div className="bg-white shadow rounded-lg">
@@ -167,11 +114,12 @@ export default function ProfilePage() {
               <h3 className="text-2xl font-bold text-gray-900">
                 {user.name}
               </h3>
-              {session?.user?.id === user._id && (
-                <p className="mt-1 text-sm text-gray-500">
-                  {user.email}
-                </p>
-              )}
+              <p className="mt-1 text-sm text-gray-500">
+                @{user.username}
+              </p>
+              <p className="mt-1 text-sm text-gray-500">
+                {user.email}
+              </p>
             </div>
           </div>
         </div>
@@ -195,7 +143,7 @@ export default function ProfilePage() {
           </dl>
         </div>
 
-        {user.achievements.length > 0 && (
+        {user.achievements && user.achievements.length > 0 && (
           <div className="border-t border-gray-200 px-4 py-5 sm:px-6">
             <h3 className="text-xl font-bold text-gray-900 mb-6">
               Conquistas
@@ -233,7 +181,7 @@ export default function ProfilePage() {
         {user.news && user.news.length > 0 && (
           <div className="border-t border-gray-200 px-4 py-5 sm:px-6">
             <h3 className="text-xl font-bold text-gray-900 mb-6">
-              Minhas Notícias
+              Notícias Publicadas
             </h3>
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {user.news.map((news) => (
@@ -273,15 +221,6 @@ export default function ProfilePage() {
           </div>
         )}
       </div>
-
-      {user && (
-        <EditProfileModal 
-          user={user} 
-          isOpen={isModalOpen} 
-          onClose={closeModal} 
-          onSave={handleSaveProfile} 
-        />
-      )}
     </div>
   );
 } 

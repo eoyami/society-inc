@@ -4,15 +4,19 @@ import News from '../models/News';
 export interface News {
   _id: string;
   title: string;
-  slug: string;
   content: string;
-  excerpt: string;
   image: string;
-  category: string;
-  author: string;
-  createdAt: string;
-  updatedAt: string;
+  author: {
+    _id: string;
+    name: string;
+    image: string;
+    username: string;
+  };
   views: number;
+  featured: boolean;
+  createdAt: string;
+  category: string;
+  slug: string;
 }
 
 export async function getNews(limit?: number) {

@@ -5,23 +5,7 @@ import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
-
-interface News {
-  _id: string;
-  title: string;
-  content: string;
-  image: string;
-  author: {
-    _id: string;
-    name: string;
-    image: string;
-  };
-  views: number;
-  featured: boolean;
-  createdAt: string;
-  category: string;
-  slug: string;
-}
+import { News } from '@/app/lib/news';
 
 export default function NewsPage() {
   const params = useParams();
@@ -47,13 +31,29 @@ export default function NewsPage() {
         const data = await response.json();
         setNews(data);
 
-        // Registrar visualização
-        const viewResponse = await fetch(`/api/news/${params.id}/view`, { 
-          method: 'POST' 
-        });
+        // Verificar se já visualizou esta notícia nas últimas 24 horas
+        const viewedNews = localStorage.getItem('viewedNews');
+        const viewedNewsData = viewedNews ? JSON.parse(viewedNews) : {};
         
-        if (!viewResponse.ok) {
-          console.error('Erro ao registrar visualização:', viewResponse.status);
+        const lastView = viewedNewsData[params.id];
+        const now = new Date().getTime();
+        const oneDay = 24 * 60 * 60 * 1000; // 24 horas em milissegundos
+
+        if (!lastView || (now - lastView) > oneDay) {
+          // Registrar visualização
+          const viewResponse = await fetch(`/api/news/${params.id}/views`, { 
+            method: 'POST' 
+          });
+          
+          if (viewResponse.ok) {
+            // Atualizar o cache com a nova visualização
+            viewedNewsData[params.id] = now;
+            localStorage.setItem('viewedNews', JSON.stringify(viewedNewsData));
+            
+            // Atualizar o contador na UI
+            const viewData = await viewResponse.json();
+            setNews(prev => prev ? { ...prev, views: viewData.views } : null);
+          }
         }
       } catch (err) {
         console.error('Erro ao carregar notícia:', err);
@@ -65,6 +65,42 @@ export default function NewsPage() {
 
     fetchNews();
   }, [params.id]);
+
+  useEffect(() => {
+    const registerView = async () => {
+      if (!news) return;
+
+      // Verificar se já visualizou esta notícia nas últimas 24 horas
+      const viewedNews = localStorage.getItem('viewedNews');
+      const viewedNewsData = viewedNews ? JSON.parse(viewedNews) : {};
+      
+      const lastView = viewedNewsData[news._id];
+      const now = new Date().getTime();
+      const oneDay = 24 * 60 * 60 * 1000; // 24 horas em milissegundos
+
+      if (!lastView || (now - lastView) > oneDay) {
+        try {
+          const response = await fetch(`/api/news/${news._id}/views`, {
+            method: 'POST',
+          });
+          
+          if (response.ok) {
+            // Atualizar o cache com a nova visualização
+            viewedNewsData[news._id] = now;
+            localStorage.setItem('viewedNews', JSON.stringify(viewedNewsData));
+            
+            // Atualizar o contador na UI
+            const data = await response.json();
+            setNews(prev => prev ? { ...prev, views: data.views } : null);
+          }
+        } catch (error) {
+          console.error('Erro ao registrar visualização:', error);
+        }
+      }
+    };
+
+    registerView();
+  }, [news]);
 
   if (loading) {
     return (
@@ -94,7 +130,7 @@ export default function NewsPage() {
       </div>
 
       <article className="max-w-4xl mx-auto card">
-        <div className="relative h-[500px] w-full">
+        <div className="relative h-[300px] sm:h-[400px] md:h-[500px] w-full">
           {news.image && news.image.trim() !== '' && (
             <Image
               src={news.image}
@@ -106,12 +142,12 @@ export default function NewsPage() {
           )}
         </div>
 
-        <div className="p-8">
-          <h1 className="text-4xl font-bold mb-6 leading-tight text-gray-900">{news.title}</h1>
+        <div className="p-4 sm:p-6 md:p-8">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 sm:mb-6 leading-tight text-gray-900">{news.title}</h1>
           
           <div className="flex flex-wrap items-center gap-4 mb-8 pb-6 border-b border-gray-200">
             <div className="flex items-center gap-4">
-              <div className="relative h-12 w-12 rounded-full overflow-hidden">
+              <Link href={`/profile/${news.author.username}`} className="relative h-12 w-12 rounded-full overflow-hidden">
                 {news.author?.image && news.author.image.trim() !== '' && (
                   <Image
                     src={news.author.image}
@@ -120,9 +156,14 @@ export default function NewsPage() {
                     className="object-cover"
                   />
                 )}
-              </div>
+              </Link>
               <div>
-                <p className="font-semibold text-gray-900">{news.author.name}</p>
+                <Link 
+                  href={`/profile/${news.author.username}`}
+                  className="font-semibold text-gray-900 hover:text-blue-600 transition-colors"
+                >
+                  {news.author.name}
+                </Link>
                 <p className="text-gray-600 text-sm">
                   {new Date(news.createdAt).toLocaleDateString('pt-BR', {
                     day: '2-digit',
@@ -165,11 +206,7 @@ export default function NewsPage() {
           </div>
 
           <div className="prose">
-            {news.content.split('\n').map((paragraph, index) => (
-              <p key={index}>
-                {paragraph}
-              </p>
-            ))}
+            <div dangerouslySetInnerHTML={{ __html: news.content }} />
           </div>
         </div>
       </article>

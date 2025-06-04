@@ -4,6 +4,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 export interface IUserDocument extends Document {
   name: string;
   email: string;
+  username: string;
   password?: string; // password might be optional
   image?: string;
   coverImage?: string;
@@ -22,6 +23,13 @@ const userSchema = new mongoose.Schema<IUserDocument>({
     type: String,
     required: true,
     unique: true,
+  },
+  username: {
+    type: String,
+    required: true,
+    unique: true,
+    trim: true,
+    lowercase: true,
   },
   password: {
     type: String,

@@ -1,34 +1,28 @@
 import { NextResponse } from 'next/server';
-import { connectDB } from '@/app/lib/mongodb';
-import News from '@/app/models/News';
+import { connectDB } from '../../../../lib/mongodb';
+import News from '../../../../models/News';
 
 export async function POST(
   request: Request,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = context.params;
-    if (!id) {
-      return NextResponse.json(
-        { error: 'Slug da notícia não fornecido' },
-        { status: 400 }
-      );
-    }
+    const { id } = params;
 
     await connectDB();
-    
-    const news = await News.findOneAndUpdate(
-      { slug: id },
-      { $inc: { views: 1 } },
-      { new: true }
-    );
 
+    // Buscar a notícia
+    const news = await News.findById(id);
     if (!news) {
       return NextResponse.json(
         { error: 'Notícia não encontrada' },
         { status: 404 }
       );
     }
+
+    // Incrementar visualizações
+    news.views += 1;
+    await news.save();
 
     return NextResponse.json({ views: news.views });
   } catch (error) {

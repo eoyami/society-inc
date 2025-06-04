@@ -12,6 +12,7 @@
     "@auth/mongodb-adapter": "^3.9.1",
     "@tiptap/extension-history": "^2.12.0",
     "@tiptap/extension-image": "^2.12.0",
+    "@tiptap/extension-link": "^2.12.0",
     "@tiptap/extension-strike": "^2.12.0",
     "@tiptap/extension-underline": "^2.12.0",
     "@tiptap/pm": "^2.12.0",
