@@ -24,7 +24,7 @@ interface User {
 }
 
 export default function ProfilePage() {
-  const { data: session, status } = useSession();
+  const { data: session, status, update } = useSession();
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -32,26 +32,30 @@ export default function ProfilePage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
-    if (!session) {
+    // Só redireciona se a sessão estiver carregada e não existir
+    if (status === 'unauthenticated') {
       router.push('/login');
       return;
     }
 
-    const fetchUser = async () => {
-      try {
-        const response = await fetch(`/api/users/${session.user.id}`);
-        if (!response.ok) throw new Error('Erro ao carregar perfil');
-        const data = await response.json();
-        setUser(data);
-      } catch (err) {
-        setError('Erro ao carregar perfil');
-      } finally {
-        setLoading(false);
-      }
-    };
+    // Só busca os dados do usuário se a sessão estiver carregada e autenticada
+    if (status === 'authenticated' && session?.user?.id) {
+      const fetchUser = async () => {
+        try {
+          const response = await fetch(`/api/users/${session.user.id}`);
+          if (!response.ok) throw new Error('Erro ao carregar perfil');
+          const data = await response.json();
+          setUser(data);
+        } catch (err) {
+          setError('Erro ao carregar perfil');
+        } finally {
+          setLoading(false);
+        }
+      };
 
-    fetchUser();
-  }, [session, router]);
+      fetchUser();
+    }
+  }, [session, status, router]);
 
   const openModal = () => {
     setIsModalOpen(true);
@@ -77,8 +81,18 @@ export default function ProfilePage() {
 
       const updatedUserData = await response.json();
       setUser(updatedUserData);
-      console.log('Perfil atualizado com sucesso!');
 
+      // Atualiza a sessão com os novos dados
+      await update({
+        ...session,
+        user: {
+          ...session.user,
+          name: updatedUser.name,
+          image: updatedUser.image || session.user.image,
+        },
+      });
+
+      console.log('Perfil atualizado com sucesso!');
     } catch (err) {
       console.error('Erro ao salvar perfil:', err);
       throw err;
@@ -103,7 +117,7 @@ export default function ProfilePage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
-      <div className="relative h-48 w-full rounded-lg overflow-hidden mb-6">
+      <div className="relative h-64 w-full rounded-lg overflow-hidden mb-20">
         {user.coverImage && user.coverImage.trim() !== '' ? (
           <Image
             src={user.coverImage}
@@ -122,10 +136,10 @@ export default function ProfilePage() {
         </button>
       </div>
 
-      <div className="bg-white shadow rounded-lg overflow-hidden">
+      <div className="bg-white shadow rounded-lg">
         <div className="px-4 py-5 sm:px-6">
-          <div className="flex items-center">
-            <div className="relative h-20 w-20 rounded-full overflow-hidden -mt-10 border-4 border-white bg-gray-400">
+          <div className="flex flex-col items-center">
+            <div className="relative h-32 w-32 rounded-full overflow-hidden -mt-24 border-4 border-white bg-gray-400 shadow-lg">
               {user.image && user.image.trim() !== '' ? (
                 <Image
                   src={user.image}
@@ -134,14 +148,14 @@ export default function ProfilePage() {
                   className="object-cover"
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-gray-700 text-2xl">{user.name.charAt(0)}</div>
+                <div className="w-full h-full flex items-center justify-center text-gray-700 text-4xl">{user.name.charAt(0)}</div>
               )}
             </div>
-            <div className="ml-4 pt-4">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">
+            <div className="mt-4 text-center">
+              <h3 className="text-2xl font-bold text-gray-900">
                 {user.name}
               </h3>
-              <p className="mt-1 max-w-2xl text-sm text-gray-500">
+              <p className="mt-1 text-sm text-gray-500">
                 {user.email}
               </p>
             </div>
@@ -149,18 +163,18 @@ export default function ProfilePage() {
         </div>
 
         <div className="border-t border-gray-200 px-4 py-5 sm:px-6">
-          <dl className="grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2">
+          <dl className="grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-3">
             <div className="sm:col-span-1">
               <dt className="text-sm font-medium text-gray-500">Nível</dt>
-              <dd className="mt-1 text-sm text-gray-900">{user.level}</dd>
+              <dd className="mt-1 text-lg font-semibold text-gray-900">{user.level}</dd>
             </div>
             <div className="sm:col-span-1">
               <dt className="text-sm font-medium text-gray-500">Pontos</dt>
-              <dd className="mt-1 text-sm text-gray-900">{user.points}</dd>
+              <dd className="mt-1 text-lg font-semibold text-gray-900">{user.points}</dd>
             </div>
             <div className="sm:col-span-1">
               <dt className="text-sm font-medium text-gray-500">Função</dt>
-              <dd className="mt-1 text-sm text-gray-900">
+              <dd className="mt-1 text-lg font-semibold text-gray-900">
                 {user.role === 'admin' ? 'Administrador' : 'Usuário'}
               </dd>
             </div>
@@ -169,16 +183,16 @@ export default function ProfilePage() {
 
         {user.achievements.length > 0 && (
           <div className="border-t border-gray-200 px-4 py-5 sm:px-6">
-            <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
+            <h3 className="text-xl font-bold text-gray-900 mb-6">
               Conquistas
             </h3>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {user.achievements.map((achievement) => (
                 <div
                   key={achievement._id}
-                  className="bg-gray-50 rounded-lg p-4 flex items-center"
+                  className="bg-gray-50 rounded-lg p-4 flex items-center hover:bg-gray-100 transition-colors"
                 >
-                  <div className="relative h-12 w-12 flex-shrink-0">
+                  <div className="relative h-16 w-16 flex-shrink-0">
                     {achievement.image && achievement.image.trim() !== '' && (
                       <Image
                         src={achievement.image}
@@ -189,7 +203,7 @@ export default function ProfilePage() {
                     )}
                   </div>
                   <div className="ml-4">
-                    <h4 className="text-sm font-medium text-gray-900">
+                    <h4 className="text-base font-medium text-gray-900">
                       {achievement.name}
                     </h4>
                     <p className="text-sm text-gray-500">
