@@ -4,6 +4,7 @@ import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
+import Notifications from '@/app/components/Notifications';
 
 interface MenuItem {
   _id: string;
@@ -166,6 +167,7 @@ export default function ClientLayout({
                       Admin
                     </Link>
                   )}
+                  <Notifications />
                   <Link
                     href="/profile"
                     className={`text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium ${
@@ -250,6 +252,9 @@ export default function ClientLayout({
                       Admin
                     </Link>
                   )}
+                  <div className="pl-3 pr-4 py-2">
+                    <Notifications />
+                  </div>
                   <Link
                     href="/profile"
                     className={`block pl-3 pr-4 py-2 text-base font-medium transform transition-transform duration-200 hover:translate-x-1 ${

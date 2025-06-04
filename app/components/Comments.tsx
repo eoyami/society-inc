@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { formatDate } from '@/app/lib/utils';
 
@@ -19,16 +20,62 @@ interface Comment {
 }
 
 interface CommentsProps {
+  newsId: string;
   newsSlug: string;
+  newsTitle: string;
+  newsAuthor: {
+    _id: string;
+    name: string;
+    username: string;
+  };
 }
 
-export default function Comments({ newsSlug }: CommentsProps) {
+export default function Comments({ newsId, newsSlug, newsTitle, newsAuthor }: CommentsProps) {
   const { data: session } = useSession();
+  const router = useRouter();
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [replyTo, setReplyTo] = useState<{ id: string; author: { name: string; username: string } } | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [socket, setSocket] = useState<WebSocket | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (session) {
+      const ws = new WebSocket(`${process.env.NEXT_PUBLIC_APP_URL}/api/socket`);
+
+      ws.onopen = () => {
+        console.log('WebSocket conectado');
+      };
+
+      ws.onerror = (error) => {
+        console.error('Erro no WebSocket:', error);
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'newNotification') {
+            // Aqui você pode adicionar lógica para mostrar a notificação
+            console.log('Nova notificação:', data.data);
+          }
+        } catch (error) {
+          console.error('Erro ao processar mensagem:', error);
+        }
+      };
+
+      ws.onclose = () => {
+        console.log('WebSocket desconectado');
+      };
+
+      setSocket(ws);
+
+      return () => {
+        ws.close();
+      };
+    }
+  }, [session]);
 
   useEffect(() => {
     fetchComments();
@@ -48,10 +95,15 @@ export default function Comments({ newsSlug }: CommentsProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!session?.user) {
+      router.push('/login');
+      return;
+    }
+
     if (!newComment.trim()) return;
 
-    setIsLoading(true);
-    setError('');
+    setIsSubmitting(true);
+    setError(null);
 
     try {
       const response = await fetch(`/api/news/${newsSlug}/comments`, {
@@ -59,39 +111,46 @@ export default function Comments({ newsSlug }: CommentsProps) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           content: newComment,
-          parentCommentId: replyTo?.id 
+          parentComment: replyTo?.id,
         }),
       });
 
-      if (!response.ok) throw new Error('Erro ao enviar comentário');
-
-      const comment = await response.json();
-      
-      if (replyTo) {
-        // Atualizar a lista de respostas do comentário pai
-        setComments(comments.map(c => {
-          if (c._id === replyTo.id) {
-            return {
-              ...c,
-              replies: [...(c.replies || []), comment]
-            };
-          }
-          return c;
-        }));
-      } else {
-        // Adicionar novo comentário principal
-        setComments([comment, ...comments]);
+      if (!response.ok) {
+        throw new Error('Falha ao enviar comentário');
       }
+
+      const data = await response.json();
       
+      if (session.user.id !== (replyTo ? replyTo.author._id : newsAuthor._id)) {
+        // Enviar notificação via API
+        await fetch('/api/notifications', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            type: replyTo ? 'reply' : 'comment',
+            recipient: replyTo ? replyTo.author._id : newsAuthor._id,
+            sender: session.user.id,
+            content: newComment,
+            relatedNews: {
+              _id: newsId,
+              slug: newsSlug,
+              title: newsTitle
+            }
+          }),
+        });
+      }
+
       setNewComment('');
       setReplyTo(null);
-    } catch (error) {
-      console.error('Erro ao enviar comentário:', error);
-      setError('Não foi possível enviar o comentário');
+      fetchComments();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao enviar comentário');
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -141,13 +200,16 @@ export default function Comments({ newsSlug }: CommentsProps) {
           <p className="text-gray-700">{comment.content}</p>
           {!isReply && session && (
             <button
-              onClick={() => setReplyTo({ 
-                id: comment._id, 
-                author: { 
-                  name: comment.author.name, 
-                  username: comment.author.username 
-                } 
-              })}
+              onClick={() => {
+                setReplyTo({ 
+                  id: comment._id, 
+                  author: { 
+                    name: comment.author.name, 
+                    username: comment.author.username 
+                  } 
+                });
+                textareaRef.current?.focus();
+              }}
               className="mt-2 text-sm text-blue-600 hover:text-blue-700"
             >
               Responder
@@ -197,14 +259,15 @@ export default function Comments({ newsSlug }: CommentsProps) {
                 placeholder={replyTo ? `Respondendo a @${replyTo.author.username}...` : "Escreva seu comentário..."}
                 className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                 rows={3}
+                ref={textareaRef}
               />
               <div className="mt-2 flex justify-end">
                 <button
                   type="submit"
-                  disabled={isLoading || !newComment.trim()}
+                  disabled={isSubmitting || !newComment.trim()}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isLoading ? 'Enviando...' : replyTo ? 'Responder' : 'Comentar'}
+                  {isSubmitting ? 'Enviando...' : replyTo ? 'Responder' : 'Comentar'}
                 </button>
               </div>
             </div>
@@ -228,9 +291,11 @@ export default function Comments({ newsSlug }: CommentsProps) {
         </div>
       )}
 
-      <div className="space-y-6">
+      <div className="space-y-8">
         {comments.map((comment) => (
-          <CommentItem key={comment._id} comment={comment} />
+          <div key={comment._id} className="comment-thread">
+            <CommentItem comment={comment} />
+          </div>
         ))}
 
         {comments.length === 0 && !error && (
