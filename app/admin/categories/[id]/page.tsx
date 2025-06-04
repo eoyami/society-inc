@@ -2,14 +2,12 @@ import { notFound } from 'next/navigation';
 import { connectDB } from '@/app/lib/mongodb';
 import Category from '@/app/models/Category';
 
-type Props = {
-  params: {
-    id: string;
-  };
+interface PageProps {
+  params: any;
   searchParams: { [key: string]: string | string[] | undefined };
-};
+}
 
-export default async function EditCategoryPage({ params }: Props) {
+export default async function EditCategoryPage({ params }: PageProps) {
   await connectDB();
   const category = await Category.findById(params.id);
 
