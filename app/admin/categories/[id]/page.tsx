@@ -4,7 +4,7 @@ import Category from '@/app/models/Category';
 
 interface PageProps {
   params: any;
-  searchParams: { [key: string]: string | string[] | undefined };
+  searchParams: any;
 }
 
 export default async function EditCategoryPage({ params }: PageProps) {
