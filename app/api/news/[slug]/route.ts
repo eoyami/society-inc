@@ -1,7 +1,7 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/app/lib/mongodb';
 import News from '@/app/models/News';
-import { getServerSession } from 'next-auth';
+import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/lib/auth';
 
 type Params = {
@@ -27,138 +27,59 @@ interface News {
   updatedAt?: Date;
 }
 
-export async function GET(request: NextRequest, { params }: Params) {
+export async function GET(request: NextRequest, { params }: { params: any }) {
   try {
     await connectDB();
     const news = await News.findOne({ slug: params.slug })
       .populate('author', 'name username image')
-      .populate('category', 'name color')
-      .lean();
-
+      .populate('category', 'name color slug');
     if (!news) {
-      return new Response(JSON.stringify({ error: 'Notícia não encontrada' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return NextResponse.json({ error: 'Notícia não encontrada' }, { status: 404 });
     }
-
-    // Serializar os dados
-    const serializedNews = {
-      ...news,
-      _id: news._id.toString(),
-      author: {
-        _id: news.author._id.toString(),
-        name: news.author.name,
-        username: news.author.username,
-        image: news.author.image
-      },
-      createdAt: news.createdAt.toISOString(),
-      updatedAt: news.updatedAt?.toISOString()
-    };
-
-    return new Response(JSON.stringify(serializedNews), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return NextResponse.json(news);
   } catch (error) {
-    console.error('Erro ao buscar notícia:', error);
-    return new Response(JSON.stringify({ error: 'Erro ao buscar notícia' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    console.error(error);
+    return NextResponse.json({ error: 'Erro ao buscar notícia' }, { status: 500 });
   }
 }
 
-export async function PUT(request: NextRequest, { params }: Params) {
+export async function PUT(request: NextRequest, { params }: { params: any }) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session) {
-      return new Response(JSON.stringify({ error: 'Não autorizado' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
     await connectDB();
-    const news = await News.findOne({ slug: params.slug });
-
-    if (!news) {
-      return new Response(JSON.stringify({ error: 'Notícia não encontrada' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.role !== 'admin') {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
-
-    if (news.author.toString() !== session.user.id) {
-      return new Response(JSON.stringify({ error: 'Não autorizado' }), {
-        status: 403,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
     const data = await request.json();
-    const updatedNews = await News.findByIdAndUpdate(
-      news._id,
-      { $set: data },
+    const news = await News.findOneAndUpdate(
+      { slug: params.slug },
+      data,
       { new: true }
-    )
-      .populate('author', 'name username image')
-      .populate('category', 'name color')
-      .lean();
-
-    return new Response(JSON.stringify(updatedNews), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    );
+    if (!news) {
+      return NextResponse.json({ error: 'Notícia não encontrada' }, { status: 404 });
+    }
+    return NextResponse.json(news);
   } catch (error) {
-    console.error('Erro ao atualizar notícia:', error);
-    return new Response(JSON.stringify({ error: 'Erro ao atualizar notícia' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    console.error(error);
+    return NextResponse.json({ error: 'Erro ao atualizar notícia' }, { status: 500 });
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: Params) {
+export async function DELETE(request: NextRequest, { params }: { params: any }) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session) {
-      return new Response(JSON.stringify({ error: 'Não autorizado' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
     await connectDB();
-    const news = await News.findOne({ slug: params.slug });
-
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.role !== 'admin') {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+    }
+    const news = await News.findOneAndDelete({ slug: params.slug });
     if (!news) {
-      return new Response(JSON.stringify({ error: 'Notícia não encontrada' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return NextResponse.json({ error: 'Notícia não encontrada' }, { status: 404 });
     }
-
-    if (news.author.toString() !== session.user.id) {
-      return new Response(JSON.stringify({ error: 'Não autorizado' }), {
-        status: 403,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
-    await News.findByIdAndDelete(news._id);
-
-    return new Response(JSON.stringify({ message: 'Notícia excluída com sucesso' }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return NextResponse.json({ message: 'Notícia excluída com sucesso' });
   } catch (error) {
-    console.error('Erro ao excluir notícia:', error);
-    return new Response(JSON.stringify({ error: 'Erro ao excluir notícia' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    console.error(error);
+    return NextResponse.json({ error: 'Erro ao excluir notícia' }, { status: 500 });
   }
 } 
