@@ -1,27 +1,19 @@
 import { withAuth } from 'next-auth/middleware';
 import { NextResponse } from 'next/server';
-import { JWT } from 'next-auth/jwt';
-import type { NextRequest } from 'next/server';
+import { getToken, JWT } from 'next-auth/jwt';
 
 interface Token extends JWT {
   role: string;
 }
 
 export default withAuth(
-  function middleware(req) {
-    const token = req.nextauth.token as Token;
+  async function middleware(req) {
+    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET }) as unknown as Token | null;
+    // Verifica se a rota é uma rota de admin
     const isAdminRoute = req.nextUrl.pathname.startsWith('/admin');
-    const isSocketRoute = req.nextUrl.pathname.startsWith('/api/socket');
-
     console.log('Middleware - URL:', req.nextUrl.pathname);
     console.log('Middleware - Token:', token);
     console.log('Middleware - Is Admin Route:', isAdminRoute);
-    console.log('Middleware - Is Socket Route:', isSocketRoute);
-
-    // Permitir que as requisições do Socket.IO passem sem autenticação
-    if (isSocketRoute) {
-      return NextResponse.next();
-    }
 
     if (isAdminRoute) {
       if (!token) {
@@ -52,7 +44,6 @@ export default withAuth(
 
 export const config = {
   matcher: [
-    '/api/socket/:path*',
     '/admin/:path*',
   ],
 }; 
