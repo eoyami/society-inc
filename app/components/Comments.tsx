@@ -35,47 +35,12 @@ export default function Comments({ newsId, newsSlug, newsTitle, newsAuthor }: Co
   const router = useRouter();
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
-  const [replyTo, setReplyTo] = useState<{ id: string; author: { name: string; username: string } } | null>(null);
+  const [replyTo, setReplyTo] = useState<{ id: string; author: {
+    _id: any; name: string; username: string 
+} } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [socket, setSocket] = useState<WebSocket | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    if (session) {
-      const ws = new WebSocket(`${process.env.NEXT_PUBLIC_APP_URL}/api/socket`);
-
-      ws.onopen = () => {
-        console.log('WebSocket conectado');
-      };
-
-      ws.onerror = (error) => {
-        console.error('Erro no WebSocket:', error);
-      };
-
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data.type === 'newNotification') {
-            // Aqui você pode adicionar lógica para mostrar a notificação
-            console.log('Nova notificação:', data.data);
-          }
-        } catch (error) {
-          console.error('Erro ao processar mensagem:', error);
-        }
-      };
-
-      ws.onclose = () => {
-        console.log('WebSocket desconectado');
-      };
-
-      setSocket(ws);
-
-      return () => {
-        ws.close();
-      };
-    }
-  }, [session]);
 
   useEffect(() => {
     fetchComments();
@@ -119,29 +84,6 @@ export default function Comments({ newsId, newsSlug, newsTitle, newsAuthor }: Co
 
       if (!response.ok) {
         throw new Error('Falha ao enviar comentário');
-      }
-
-      const data = await response.json();
-      
-      if (session.user.id !== (replyTo ? replyTo.author._id : newsAuthor._id)) {
-        // Enviar notificação via API
-        await fetch('/api/notifications', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            type: replyTo ? 'reply' : 'comment',
-            recipient: replyTo ? replyTo.author._id : newsAuthor._id,
-            sender: session.user.id,
-            content: newComment,
-            relatedNews: {
-              _id: newsId,
-              slug: newsSlug,
-              title: newsTitle
-            }
-          }),
-        });
       }
 
       setNewComment('');
@@ -203,9 +145,10 @@ export default function Comments({ newsId, newsSlug, newsTitle, newsAuthor }: Co
               onClick={() => {
                 setReplyTo({ 
                   id: comment._id, 
-                  author: { 
-                    name: comment.author.name, 
-                    username: comment.author.username 
+                  author: {
+                    name: comment.author.name,
+                    username: comment.author.username,
+                    _id: undefined
                   } 
                 });
                 textareaRef.current?.focus();

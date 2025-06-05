@@ -59,7 +59,7 @@ export async function GET(
 // POST - Criar novo comentário ou resposta
 export async function POST(
   request: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -70,9 +70,10 @@ export async function POST(
         { status: 401 }
       );
     }
-
+    const resolvedParams = await params;
+    const { slug } = resolvedParams;
     await connectDB();
-    const news = await News.findOne({ slug: params.slug });
+    const news = await News.findOne({ slug });
     
     if (!news) {
       return NextResponse.json(

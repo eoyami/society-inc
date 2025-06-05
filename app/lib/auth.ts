@@ -89,7 +89,6 @@ export const authOptions: NextAuthOptions = {
   },
   secret: process.env.NEXTAUTH_SECRET,
   debug: true,
-  trustHost: true,
   logger: {
     error(code, metadata) {
       console.error('NextAuth Error:', code, metadata);
